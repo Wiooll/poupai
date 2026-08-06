@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download } from 'lucide-react';
 import { APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
@@ -8,7 +8,7 @@ import type { FinanceBackupSnapshot } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
 const SUPPORT_PIX_KEY = import.meta.env.VITE_SUPPORT_PIX_KEY?.trim() || '';
-const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env);
+const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env as any);
 
 const createMailtoLink = (type: 'suggestion' | 'bug') => {
   const subject = type === 'suggestion' ? '[FinDash] Sugestão' : '[FinDash] Bug';

@@ -7,8 +7,6 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionsTable } from './components/TransactionsTable';
 import { Categories } from './components/Categories';
 import { Goals } from './components/Goals';
-import { RecurringTransactions } from './components/RecurringTransactions';
-import { Accounts } from './components/Accounts';
 import { CreditCards } from './components/CreditCards';
 import { Insights } from './components/Insights';
 import { Loans } from './components/Loans';
@@ -56,10 +54,8 @@ function AppContent() {
       {activeTab === 'dashboard' && <Dashboard />}
       {activeTab === 'transactions' && <TransactionsTable />}
       {activeTab === 'loans' && <Loans />}
-      {activeTab === 'accounts' && <Accounts />}
       {activeTab === 'credit-cards' && <CreditCards />}
       {activeTab === 'insights' && <Insights />}
-      {activeTab === 'recurring' && <RecurringTransactions />}
       {activeTab === 'categories' && <Categories />}
       {activeTab === 'goals' && <Goals />}
       {activeTab === 'updates' && <Updates />}
