@@ -1,4 +1,4 @@
-﻿# FinDash | Seu Dashboard Financeiro
+# FinDash | Seu Dashboard Financeiro
 
 O **FinDash** é um dashboard moderno, interativo e responsivo para controle de despesas e finanças pessoais.
 
@@ -80,6 +80,12 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 4. Reinicie o app (`npm run dev`) após atualizar variáveis de ambiente.
 
 ## Atualizações recentes
+
+### Sprint 4.7.0 - Metas Financeiras e Otimização de Menu
+
+- Adição da nova funcionalidade de **Metas**, permitindo cadastro e acompanhamento de progresso de objetivos financeiros.
+- Inclusão da opção de expandir e recolher o menu lateral (desktop) para melhorar a usabilidade.
+- Otimização do menu e barra de navegação com a remoção de abas não utilizadas (Empréstimos).
 
 ### Sprint 4.6.0 - Espaço de App Parceiro
 

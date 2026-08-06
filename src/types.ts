@@ -104,6 +104,17 @@ export interface Loan {
   updatedAt: string;
 }
 
+export interface Goal {
+  id: string;
+  userId?: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: string; // YYYY-MM-DD
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Sprint 2: Status persistido de uma fatura (o total é calculado via useMemo)
 export interface FaturaStatus {
   id: string;              // `fatura_${cartaoId}_${anoMes}`
@@ -191,6 +202,7 @@ export interface FinanceBackupData {
   cartoesCredito: CartaoCredito[];
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
+  goals: Goal[];
 }
 
 export interface FinanceBackupSnapshot {

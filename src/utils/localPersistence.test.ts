@@ -12,6 +12,7 @@ const mockData: FinanceBackupData = {
   cartoesCredito: [],
   faturaStatuses: [],
   loans: [],
+  goals: [],
 };
 
 describe('localPersistence', () => {

@@ -1,10 +1,12 @@
-﻿import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   BrainCircuit,
+  ChevronLeft,
+  ChevronRight,
   Circle,
-  CircleDollarSign,
   CreditCard,
   LayoutDashboard,
+  LogOut,
   Megaphone,
   Moon,
   ReceiptText,
@@ -37,6 +39,14 @@ export const Layout = ({
   releaseNotification,
   onOpenUpdates,
 }: LayoutProps) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('findash_sidebar_collapsed') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('findash_sidebar_collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
   const { config, setThemeMode } = useFinance();
   const { user, logout } = useAuth();
   const currentTheme = config.themeMode || (config.isDarkMode ? 'black' : 'white');
@@ -63,7 +73,6 @@ export const Layout = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transações', icon: ReceiptText },
-    { id: 'loans', label: 'Empréstimos', icon: CircleDollarSign },
     { id: 'credit-cards', label: 'Cartões', icon: CreditCard },
     { id: 'insights', label: 'Insights', icon: BrainCircuit },
     { id: 'categories', label: 'Categorias', icon: Tags },
@@ -74,14 +83,28 @@ export const Layout = ({
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans transition-colors duration-300">
-      <aside className="w-full md:w-64 bg-card border-r border-border p-4 flex flex-col shadow-sm z-10 hidden md:flex">
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <div className="bg-primary text-primary-foreground p-2 rounded-lg">
-            <Wallet size={24} />
+      <aside className={cn(
+        "bg-card border-r border-border p-4 flex flex-col shadow-sm z-10 hidden md:flex transition-all duration-300",
+        isSidebarCollapsed ? "w-20" : "w-64"
+      )}>
+        <div className={cn("flex items-center gap-2 mb-8", isSidebarCollapsed ? "justify-center px-0" : "justify-between px-2")}>
+          <div className="flex items-center gap-2">
+            <div className="bg-primary text-primary-foreground p-2 rounded-lg shrink-0">
+              <Wallet size={24} />
+            </div>
+            {!isSidebarCollapsed && (
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                {APP_NAME}
+              </h1>
+            )}
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
-            {APP_NAME}
-          </h1>
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            className="p-1 rounded-md hover:bg-secondary text-muted-foreground shrink-0 hidden md:flex"
+            title={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          >
+            {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -91,30 +114,34 @@ export const Layout = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
+                title={isSidebarCollapsed ? item.label : undefined}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm font-medium',
+                  'w-full flex items-center gap-3 py-2.5 rounded-lg transition-all text-sm font-medium',
+                  isSidebarCollapsed ? 'justify-center px-0' : 'px-4',
                   activeTab === item.id
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                 )}
               >
-                <Icon size={17} />
-                {item.label}
+                <Icon size={17} className="shrink-0" />
+                {!isSidebarCollapsed && <span>{item.label}</span>}
               </button>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-4 border-t border-border">
-          <div className="px-4 pb-3 space-y-1">
-            <p className="text-xs text-muted-foreground truncate">{user?.email || 'Usuário autenticado'}</p>
-            <p className="text-xs text-muted-foreground">Versão {APP_VERSION}</p>
-          </div>
-          <div className="w-full flex items-center justify-between px-4 py-2 rounded-lg text-muted-foreground gap-2">
-            <span className="text-sm font-medium">Tema</span>
+        <div className="mt-auto pt-4 border-t border-border flex flex-col items-center">
+          {!isSidebarCollapsed && (
+            <div className="px-4 pb-3 space-y-1 w-full text-left">
+              <p className="text-xs text-muted-foreground truncate">{user?.email || 'Usuário autenticado'}</p>
+              <p className="text-xs text-muted-foreground">Versão {APP_VERSION}</p>
+            </div>
+          )}
+          <div className={cn("w-full flex items-center gap-2 py-2 rounded-lg text-muted-foreground", isSidebarCollapsed ? "justify-center px-0" : "justify-between px-4")}>
+            {!isSidebarCollapsed && <span className="text-sm font-medium">Tema</span>}
             <button
               onClick={toggleTheme}
-              className="h-9 w-9 flex items-center justify-center rounded-lg border border-input bg-background hover:bg-secondary transition-colors"
+              className="h-9 w-9 flex items-center justify-center rounded-lg border border-input bg-background hover:bg-secondary transition-colors shrink-0"
               title="Alternar tema"
             >
               {getThemeIcon()}
@@ -122,9 +149,10 @@ export const Layout = ({
           </div>
           <button
             onClick={() => void logout()}
-            className="mt-2 w-full px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all text-left"
+            className={cn("mt-2 w-full py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center gap-3", isSidebarCollapsed ? "justify-center px-0" : "px-4 text-left")}
+            title={isSidebarCollapsed ? "Sair da conta" : undefined}
           >
-            Sair da conta
+            {isSidebarCollapsed ? <LogOut size={17} /> : "Sair da conta"}
           </button>
         </div>
       </aside>

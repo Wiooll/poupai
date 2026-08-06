@@ -11,6 +11,7 @@ import type {
   Conta,
   FaturaInfo,
   FaturaStatus,
+  Goal,
   Loan,
   LoanStatus,
   RecurrenceFrequency,
@@ -62,6 +63,12 @@ interface FinanceContextType {
   cartoesCredito: CartaoCredito[];
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
+  goals: Goal[];
+
+  // CRUD Goals
+  addGoal: (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateGoal: (id: string, g: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
 
   // CRUD Transações
   addTransaction: (t: Omit<Transaction, 'id'>) => Promise<void>;
@@ -205,6 +212,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
   const [cartoesCredito, setCartoesCredito] = useState<CartaoCredito[]>([]);
   const [faturaStatuses, setFaturaStatuses] = useState<FaturaStatus[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const userId = user?.uid || null;
   const storageKey = userId ? buildStorageKey(userId) : null;
 
@@ -243,6 +251,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     cartoesCredito,
     faturaStatuses,
     loans,
+    goals,
   }), [
     transactions,
     categories,
@@ -253,6 +262,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     cartoesCredito,
     faturaStatuses,
     loans,
+    goals,
   ]);
 
   useEffect(() => {
@@ -269,6 +279,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     setCartoesCredito(snapshot.data.cartoesCredito);
     setFaturaStatuses(snapshot.data.faturaStatuses);
     setLoans(snapshot.data.loans);
+    setGoals(snapshot.data.goals || []);
 
     const normalizedTheme: ThemeMode =
       snapshot.data.config.themeMode || (snapshot.data.config.isDarkMode ? 'black' : 'white');
@@ -428,6 +439,20 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       const data: Loan[] = [];
       snapshot.forEach((docSnap) => data.push(docSnap.data() as Loan));
       setLoans(data);
+    });
+    return () => unsubscribe();
+  }, [getUserCollection, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setGoals([]);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(getUserCollection<Goal>('goals'), (snapshot) => {
+      const data: Goal[] = [];
+      snapshot.forEach((docSnap) => data.push(docSnap.data() as Goal));
+      setGoals(data);
     });
     return () => unsubscribe();
   }, [getUserCollection, userId]);
@@ -846,6 +871,32 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     await updateLoan(id, { status });
   };
 
+  // ── CRUD Goals ───────────────────────────────────────────────────────────────
+
+  const addGoal = async (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const ownerId = ensureUserId();
+    const newId = uuid();
+    const now = new Date().toISOString();
+    const payload: Goal = {
+      ...g,
+      id: newId,
+      userId: ownerId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await setDoc(getUserDoc('goals', newId), payload);
+  };
+
+  const updateGoal = async (id: string, g: Partial<Goal>) => {
+    ensureUserId();
+    await updateDoc(getUserDoc('goals', id), { ...g, updatedAt: new Date().toISOString() });
+  };
+
+  const deleteGoal = async (id: string) => {
+    ensureUserId();
+    await deleteDoc(getUserDoc('goals', id));
+  };
+
   // ── Operações de Fatura ──────────────────────────────────────────────────────
 
   const pagarFatura = async (cartaoId: string, anoMes: string) => {
@@ -908,6 +959,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     setCartoesCredito(payload.cartoesCredito);
     setFaturaStatuses(payload.faturaStatuses);
     setLoans(payload.loans);
+    setGoals(payload.goals || []);
 
     const normalizedTheme: ThemeMode =
       payload.config.themeMode || (payload.config.isDarkMode ? 'black' : 'white');
@@ -947,6 +999,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       replaceCollection('cartoesCredito', payload.cartoesCredito),
       replaceCollection('faturaStatus', payload.faturaStatuses),
       replaceCollection('loans', payload.loans),
+      replaceCollection('goals', payload.goals || []),
       setDoc(getUserDoc('config', 'main'), { ...payload.config, userId }),
     ]);
   };
@@ -964,6 +1017,10 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         cartoesCredito,
         faturaStatuses,
         loans,
+        goals,
+        addGoal,
+        updateGoal,
+        deleteGoal,
         addTransaction,
         updateTransaction,
         deleteTransaction,
