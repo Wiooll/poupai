@@ -1,9 +1,8 @@
 import type { FinanceBackupData, FinanceBackupSnapshot } from '../types';
 
-const APP_STORAGE_PREFIX = 'findash';
+
 const SNAPSHOT_VERSION = '1.0.0';
 
-export const buildStorageKey = (userId: string) => `${APP_STORAGE_PREFIX}:${userId}:snapshot`;
 
 export const createBackupSnapshot = (data: FinanceBackupData): FinanceBackupSnapshot => ({
   version: SNAPSHOT_VERSION,
@@ -34,19 +33,5 @@ export const isValidBackupSnapshot = (value: unknown): value is FinanceBackupSna
   );
 };
 
-export const loadSnapshotFromStorage = (storageKey: string): FinanceBackupSnapshot | null => {
-  const raw = localStorage.getItem(storageKey);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isValidBackupSnapshot(parsed)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
 
-export const saveSnapshotToStorage = (storageKey: string, snapshot: FinanceBackupSnapshot) => {
-  localStorage.setItem(storageKey, JSON.stringify(snapshot));
-};
 

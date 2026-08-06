@@ -61,11 +61,11 @@ export const Goals = () => {
     setEditingGoal(null);
   };
 
-  const handleSaveGoal = async (payloadOrId: string | any, payloadOpt?: any) => {
+  const handleSaveGoal = async (payloadOrId: string | Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>, payloadOpt?: Partial<Goal>) => {
     if (typeof payloadOrId === 'string' && payloadOpt) {
       await updateGoal(payloadOrId, payloadOpt);
     } else {
-      await addGoal(payloadOrId);
+      await addGoal(payloadOrId as Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>);
     }
   };
 

@@ -8,7 +8,7 @@ import type { FinanceBackupSnapshot } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
 const SUPPORT_PIX_KEY = import.meta.env.VITE_SUPPORT_PIX_KEY?.trim() || '';
-const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env as any);
+const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env as Record<string, string | undefined>);
 
 const createMailtoLink = (type: 'suggestion' | 'bug') => {
   const subject = type === 'suggestion' ? '[FinDash] Sugestão' : '[FinDash] Bug';

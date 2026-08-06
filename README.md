@@ -20,11 +20,11 @@ O **FinDash** é um dashboard moderno, interativo e responsivo para controle de 
 - Vite
 - Tailwind CSS
 - Recharts
-- Firebase (Auth + Firestore)
+- Dexie.js (IndexedDB)
 
 ## Persistência de dados
 
-Os dados do app são sincronizados com o **Firebase Firestore** por usuário autenticado.
+O app opera no modelo **Offline-First**, utilizando o armazenamento local do navegador através do **IndexedDB (via Dexie.js)**. Os dados nunca saem do seu dispositivo, garantindo total privacidade e velocidade.
 
 ## Como executar localmente
 
@@ -80,6 +80,12 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 4. Reinicie o app (`npm run dev`) após atualizar variáveis de ambiente.
 
 ## Atualizações recentes
+
+### Sprint 4.8.0 - Offline-First e Local Database
+
+- **Privacidade total**: Remoção completa de dependências na nuvem (Firebase/Firestore e Auth).
+- **Offline-First**: Todo o banco de dados e as funcionalidades operam offline de forma nativa utilizando o armazenamento do próprio navegador com **Dexie.js (IndexedDB)**.
+- **Rápida velocidade**: Leituras reativas e gravação instantânea de transações ocorrem localmente, sem atrasos de rede.
 
 ### Sprint 4.7.0 - Metas Financeiras e Otimização de Menu
 

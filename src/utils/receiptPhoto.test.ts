@@ -7,7 +7,7 @@ const createFile = (name: string, type: string, bytes: number) =>
 describe('receiptPhoto', () => {
   it('valida formato e tamanho de imagem', () => {
     const ok = createFile('nota.png', 'image/png', 1024);
-    const badType = createFile('nota.gif', 'image/gif', 1024);
+    const badType = createFile('nota.pdf', 'application/pdf', 1024);
     const tooBig = createFile('nota.jpg', 'image/jpeg', 6 * 1024 * 1024);
 
     expect(validateReceiptPhotoFile(ok)).toBe('');

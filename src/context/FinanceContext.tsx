@@ -1,6 +1,8 @@
-/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components, react-hooks/exhaustive-deps */
+import { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../services/db';
 import type {
   AppConfig,
   FinanceBackupData,
@@ -20,17 +22,6 @@ import type {
   Transaction,
 } from '../types';
 import {
-  collection,
-  doc,
-  type CollectionReference,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  writeBatch,
-} from 'firebase/firestore';
-import {
   addDays,
   addMonths,
   addWeeks,
@@ -41,47 +32,33 @@ import {
   startOfDay,
   setDate,
 } from 'date-fns';
-import { db } from '../services/firebase';
 import { v4 as uuid } from 'uuid';
-import { useAuth } from './AuthContext';
-import {
-  buildStorageKey,
-  createBackupSnapshot,
-  loadSnapshotFromStorage,
-  saveSnapshotToStorage,
-} from '../utils/localPersistence';
 
 interface FinanceContextType {
-  // Estado existente
   transactions: Transaction[];
   categories: Categoria[];
   recurringTransactions: RecurringTransaction[];
   categoryBudgets: CategoryBudget[];
   config: AppConfig;
-  // Novo Sprint 2
   contas: Conta[];
   cartoesCredito: CartaoCredito[];
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
   goals: Goal[];
 
-  // CRUD Goals
   addGoal: (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateGoal: (id: string, g: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
 
-  // CRUD Transações
   addTransaction: (t: Omit<Transaction, 'id'>) => Promise<void>;
   updateTransaction: (id: string, t: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 
-  // Sprint 2: adicionar compra parcelada
   addParcelado: (
     base: Omit<Transaction, 'id' | 'parcelaAtual' | 'totalParcelas' | 'parcelaGrupoId'>,
     totalParcelas: number,
   ) => Promise<void>;
 
-  // Sprint 2: transferência entre contas
   transferir: (params: {
     contaOrigemId: string;
     contaDestinoId: string;
@@ -90,45 +67,36 @@ interface FinanceContextType {
     descricao?: string;
   }) => Promise<void>;
 
-  // CRUD Categorias
   addCategory: (c: Omit<Categoria, 'id'>) => Promise<void>;
   updateCategory: (id: string, c: Partial<Categoria>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
 
-  // CRUD Recorrências
   addRecurringTransaction: (r: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateRecurringTransaction: (id: string, r: Partial<RecurringTransaction>) => Promise<void>;
   deleteRecurringTransaction: (id: string) => Promise<void>;
   toggleRecurringTransaction: (id: string, active: boolean) => Promise<void>;
 
-  // CRUD Orçamentos
   upsertCategoryBudget: (categoryId: string, monthlyLimit: number) => Promise<void>;
   deleteCategoryBudget: (id: string) => Promise<void>;
 
-  // CRUD Config
   updateConfig: (c: Partial<AppConfig>) => Promise<void>;
   setThemeMode: (themeMode: ThemeMode) => Promise<void>;
 
-  // Sprint 2: CRUD Contas
   addConta: (c: Omit<Conta, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateConta: (id: string, c: Partial<Conta>) => Promise<void>;
   deleteConta: (id: string) => Promise<void>;
 
-  // Sprint 2: CRUD Cartões
   addCartaoCredito: (c: Omit<CartaoCredito, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateCartaoCredito: (id: string, c: Partial<CartaoCredito>) => Promise<void>;
   deleteCartaoCredito: (id: string) => Promise<void>;
 
-  // Loans
   addLoan: (loan: Omit<Loan, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateLoan: (id: string, loan: Partial<Loan>) => Promise<void>;
   deleteLoan: (id: string) => Promise<void>;
   updateLoanStatus: (id: string, status: LoanStatus) => Promise<void>;
 
-  // Sprint 2: Operações de fatura
   pagarFatura: (cartaoId: string, anoMes: string) => Promise<void>;
 
-  // Sprint 2: Helpers calculados
   getSaldoConta: (contaId: string) => number;
   getFaturasInfo: (anoMesParam?: string) => FaturaInfo[];
   getLimiteDisponivel: (cartaoId: string) => number;
@@ -160,25 +128,17 @@ const createRecurringTransactionId = (ruleId: string, date: string) => {
   return `rec_${ruleId}_${compactDate}`;
 };
 
-/**
- * Calcula o período de competência de uma fatura dado um cartão e um anoMes de referência.
- * - A fatura "de Abril" fecha no dia X de Abril (diaFechamento).
- * - Lançamentos que caem ANTES do fechamento vão pra fatura Abril.
- * - Vencimento é diaVencimento no mês seguinte ao fechamento.
- */
 export const calcularPeriodoFatura = (
   cartao: CartaoCredito,
-  anoMes: string, // YYYY-MM (mês de referência da fatura)
+  anoMes: string,
 ): { inicio: Date; fim: Date; dataFechamento: Date; dataVencimento: Date } => {
   const [ano, mes] = anoMes.split('-').map(Number);
   const dataFechamento = setDate(new Date(ano, mes - 1, 1), cartao.diaFechamento);
 
-  // O período da fatura começa um dia após o fechamento do mês anterior
   const mesAnterior = addMonths(dataFechamento, -1);
   const inicio = addDays(setDate(mesAnterior, cartao.diaFechamento), 1);
   const fim = dataFechamento;
 
-  // Vencimento ocorre no mês seguinte ao fechamento
   const dataVencimento = setDate(addMonths(dataFechamento, 1), cartao.diaVencimento);
 
   return { inicio, fim, dataFechamento, dataVencimento };
@@ -196,25 +156,26 @@ const getAnoMesFaturaByTransactionDate = (cartao: CartaoCredito, dataTransacao: 
   return format(addMonths(data, 1), 'yyyy-MM');
 };
 
+const stripUndefined = <T extends object>(obj: T): T =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+
 export const FinanceProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Categoria[]>(defaultCategories);
-  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
-  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
-  const [config, setConfig] = useState<AppConfig>({
+  const transactions = useLiveQuery(() => db.transactions.toArray()) || [];
+  const categories = useLiveQuery(() => db.categories.toArray()) || defaultCategories;
+  const recurringTransactions = useLiveQuery(() => db.recurringTransactions.toArray()) || [];
+  const categoryBudgets = useLiveQuery(() => db.categoryBudgets.toArray()) || [];
+  const contas = useLiveQuery(() => db.contas.toArray()) || [];
+  const cartoesCredito = useLiveQuery(() => db.cartoesCredito.toArray()) || [];
+  const faturaStatuses = useLiveQuery(() => db.faturaStatuses.toArray()) || [];
+  const loans = useLiveQuery(() => db.loans.toArray()) || [];
+  const goals = useLiveQuery(() => db.goals.toArray()) || [];
+  const configArr = useLiveQuery(() => db.config.toArray()) || [];
+
+  const config: AppConfig = configArr.find((c) => c.id === 'main') || {
     metaEconomiaMensal: 1000,
     isDarkMode: false,
     themeMode: 'white',
-  });
-  // Sprint 2
-  const [contas, setContas] = useState<Conta[]>([]);
-  const [cartoesCredito, setCartoesCredito] = useState<CartaoCredito[]>([]);
-  const [faturaStatuses, setFaturaStatuses] = useState<FaturaStatus[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const userId = user?.uid || null;
-  const storageKey = userId ? buildStorageKey(userId) : null;
+  };
 
   const applyTheme = useCallback((themeMode: ThemeMode) => {
     const root = document.documentElement;
@@ -223,21 +184,30 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     root.dataset.theme = themeMode;
   }, []);
 
-  const getUserCollection = useCallback(<T,>(collectionName: string): CollectionReference<T> => {
-    if (!userId) {
-      throw new Error('Usuario nao autenticado.');
-    }
+  // Initialize defaults
+  useEffect(() => {
+    const initDefaults = async () => {
+      const catsCount = await db.categories.count();
+      if (catsCount === 0) {
+        await db.categories.bulkAdd(defaultCategories);
+      }
+      const configCount = await db.config.count();
+      if (configCount === 0) {
+        await db.config.add({
+          id: 'main',
+          metaEconomiaMensal: 1000,
+          isDarkMode: false,
+          themeMode: 'white',
+        });
+      }
+    };
+    initDefaults();
+  }, []);
 
-    return collection(db, 'users', userId, collectionName) as CollectionReference<T>;
-  }, [userId]);
-
-  const getUserDoc = useCallback((collectionName: string, documentId: string) => {
-    if (!userId) {
-      throw new Error('Usuario nao autenticado.');
-    }
-
-    return doc(db, 'users', userId, collectionName, documentId);
-  }, [userId]);
+  useEffect(() => {
+    const normalizedTheme = config.themeMode || (config.isDarkMode ? 'black' : 'white');
+    applyTheme(normalizedTheme);
+  }, [config.themeMode, config.isDarkMode, applyTheme]);
 
   const transactionsIdSet = useMemo(() => new Set(transactions.map((t) => t.id)), [transactions]);
 
@@ -265,207 +235,14 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     goals,
   ]);
 
+  // Recurrence Sync
   useEffect(() => {
-    if (!storageKey) return;
-    const snapshot = loadSnapshotFromStorage(storageKey);
-    if (!snapshot) return;
-
-    setTransactions(snapshot.data.transactions);
-    setCategories(snapshot.data.categories);
-    setRecurringTransactions(snapshot.data.recurringTransactions);
-    setCategoryBudgets(snapshot.data.categoryBudgets);
-    setConfig(snapshot.data.config);
-    setContas(snapshot.data.contas);
-    setCartoesCredito(snapshot.data.cartoesCredito);
-    setFaturaStatuses(snapshot.data.faturaStatuses);
-    setLoans(snapshot.data.loans);
-    setGoals(snapshot.data.goals || []);
-
-    const normalizedTheme: ThemeMode =
-      snapshot.data.config.themeMode || (snapshot.data.config.isDarkMode ? 'black' : 'white');
-    applyTheme(normalizedTheme);
-  }, [applyTheme, storageKey]);
-
-  // ── Syncs Firestore ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!userId) {
-      setTransactions([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<Transaction>('transactions'), (snapshot) => {
-      const data: Transaction[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as Transaction));
-      setTransactions(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setCategories(defaultCategories);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<Categoria>('categories'), (snapshot) => {
-      if (snapshot.empty) {
-        defaultCategories.forEach((cat) => {
-          void setDoc(getUserDoc('categories', cat.id), { ...cat, userId });
-        });
-        setCategories(defaultCategories);
-      } else {
-        const data: Categoria[] = [];
-        snapshot.forEach((docSnap) => data.push(docSnap.data() as Categoria));
-        setCategories(data);
-      }
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setRecurringTransactions([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(
-      getUserCollection<RecurringTransaction>('recurringTransactions'),
-      (snapshot) => {
-        const data: RecurringTransaction[] = [];
-        snapshot.forEach((docSnap) => data.push(docSnap.data() as RecurringTransaction));
-        setRecurringTransactions(data);
-      },
-    );
-    return () => unsubscribe();
-  }, [getUserDoc, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setCategoryBudgets([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<CategoryBudget>('categoryBudgets'), (snapshot) => {
-      const data: CategoryBudget[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as CategoryBudget));
-      setCategoryBudgets(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setConfig({ metaEconomiaMensal: 1000, isDarkMode: false, themeMode: 'white' });
-      applyTheme('white');
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserDoc('config', 'main'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as AppConfig;
-        const normalizedTheme: ThemeMode =
-          data.themeMode || (data.isDarkMode ? 'black' : 'white');
-        setConfig({
-          ...data,
-          themeMode: normalizedTheme,
-          isDarkMode: normalizedTheme === 'black',
-        });
-        applyTheme(normalizedTheme);
-      } else {
-        void setDoc(getUserDoc('config', 'main'), {
-          metaEconomiaMensal: 1000,
-          isDarkMode: false,
-          themeMode: 'white',
-          userId,
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, [applyTheme, getUserDoc, userId]);
-
-  // Sprint 2: Sync Contas
-  useEffect(() => {
-    if (!userId) {
-      setContas([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<Conta>('contas'), (snapshot) => {
-      const data: Conta[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as Conta));
-      setContas(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  // Sprint 2: Sync Cartões
-  useEffect(() => {
-    if (!userId) {
-      setCartoesCredito([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<CartaoCredito>('cartoesCredito'), (snapshot) => {
-      const data: CartaoCredito[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as CartaoCredito));
-      setCartoesCredito(data);
-    });
-    return () => unsubscribe();
-  }, [userId]);
-
-  // Sprint 2: Sync status das faturas
-  useEffect(() => {
-    if (!userId) {
-      setFaturaStatuses([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<FaturaStatus>('faturaStatus'), (snapshot) => {
-      const data: FaturaStatus[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as FaturaStatus));
-      setFaturaStatuses(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setLoans([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<Loan>('loans'), (snapshot) => {
-      const data: Loan[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as Loan));
-      setLoans(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setGoals([]);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(getUserCollection<Goal>('goals'), (snapshot) => {
-      const data: Goal[] = [];
-      snapshot.forEach((docSnap) => data.push(docSnap.data() as Goal));
-      setGoals(data);
-    });
-    return () => unsubscribe();
-  }, [getUserCollection, userId]);
-
-  // ── Geração de recorrências ──────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!userId) return;
     if (recurringTransactions.length === 0) return;
 
     const syncRecurringEntries = async () => {
       const today = startOfDay(new Date());
       const existingIds = new Set(transactionsIdSet);
+      const newTransactions: Transaction[] = [];
 
       for (const rule of recurringTransactions) {
         if (!rule.active) continue;
@@ -485,9 +262,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           const txId = createRecurringTransactionId(rule.id, txDate);
 
           if (!existingIds.has(txId)) {
-            const transaction: Transaction = {
+            newTransactions.push({
               id: txId,
-              userId,
               data: txDate,
               descricao: rule.descricao,
               categoria: rule.categoria,
@@ -496,23 +272,21 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
               formaPagamento: rule.formaPagamento,
               recurringRuleId: rule.id,
               generatedByRecurrence: true,
-            };
-
-            await setDoc(getUserDoc('transactions', txId), transaction);
+            });
             existingIds.add(txId);
           }
-
           cursor = nextDateByFrequency(cursor, rule.frequency);
         }
+      }
+
+      if (newTransactions.length > 0) {
+        await db.transactions.bulkAdd(newTransactions);
       }
     };
 
     syncRecurringEntries();
-  }, [getUserDoc, recurringTransactions, transactionsIdSet, userId]);
+  }, [recurringTransactions, transactionsIdSet]);
 
-  // ── Helpers calculados ────────────────────────────────────────────────────────
-
-  /** Calcula o saldo atual de uma conta considerando todas as transações vinculadas */
   const getSaldoConta = (contaId: string): number => {
     const conta = contas.find((c) => c.id === contaId);
     if (!conta) return 0;
@@ -530,10 +304,6 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     return saldo;
   };
 
-  /**
-   * Retorna informações calculadas de todas as faturas dos cartões cadastrados.
-   * Se anoMesParam for fornecido, filtra para aquela competência; senão retorna a fatura atual de cada cartão.
-   */
   const getFaturasInfo = (anoMesParam?: string): FaturaInfo[] => {
     const hoje = new Date();
     const anoMesRef = anoMesParam || format(hoje, 'yyyy-MM');
@@ -549,7 +319,6 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const total = txsFatura.reduce((acc, t) => acc + Number(t.valor), 0);
-
       const faturaId = `fatura_${cartao.id}_${anoMesRef.replace('-', '')}`;
       const statusReg = faturaStatuses.find(
         (f) => f.cartaoId === cartao.id && f.anoMes === anoMesRef,
@@ -570,7 +339,6 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  /** Calcula o limite disponível considerando todas as despesas ainda não quitadas do cartão */
   const getLimiteDisponivel = (cartaoId: string): number => {
     const cartao = cartoesCredito.find((c) => c.id === cartaoId);
     if (!cartao) return 0;
@@ -589,66 +357,43 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     return cartao.limite - usado;
   };
 
-  // ── CRUD Transações ──────────────────────────────────────────────────────────
-
-  /**
-   * Remove campos com valor `undefined` de um objeto antes de enviar ao Firestore.
-   * O Firestore rejeita campos explicitamente `undefined` com FirebaseError.
-   */
-  const stripUndefined = <T extends object>(obj: T): T =>
-    Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
-
-  const ensureUserId = () => {
-    if (!userId) throw new Error('Usuario nao autenticado.');
-    return userId;
-  };
-
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
-    const newTx = stripUndefined({ ...t, id: newId, userId: ownerId });
-    await setDoc(getUserDoc('transactions', newId), newTx);
+    const newTx = stripUndefined({ ...t, id: uuid() });
+    await db.transactions.add(newTx);
   };
 
   const updateTransaction = async (id: string, t: Partial<Transaction>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('transactions', id), t);
+    await db.transactions.update(id, stripUndefined(t));
   };
 
   const deleteTransaction = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('transactions', id));
+    await db.transactions.delete(id);
   };
 
-  /** Cria N transações para uma compra parcelada, distribuídas nos meses seguintes */
   const addParcelado = async (
     base: Omit<Transaction, 'id' | 'parcelaAtual' | 'totalParcelas' | 'parcelaGrupoId'>,
     totalParcelas: number,
   ) => {
-    const ownerId = ensureUserId();
     const grupoId = uuid();
     const dataBase = parseISO(base.data);
 
     const batch = Array.from({ length: totalParcelas }, (_, i) => {
       const id = uuid();
       const dataVencimento = format(addMonths(dataBase, i), 'yyyy-MM-dd');
-      const tx: Transaction = stripUndefined({
+      return stripUndefined({
         ...base,
         id,
-        userId: ownerId,
         data: dataVencimento,
         parcelaAtual: i + 1,
         totalParcelas,
         parcelaGrupoId: grupoId,
         descricao: `${base.descricao} (${i + 1}/${totalParcelas})`,
       });
-      return tx;
     });
 
-    await Promise.all(batch.map((tx) => setDoc(getUserDoc('transactions', tx.id), tx)));
+    await db.transactions.bulkAdd(batch);
   };
 
-  /** Cria uma transferência entre contas (2 transações vinculadas) */
   const transferir = async ({
     contaOrigemId,
     contaDestinoId,
@@ -662,13 +407,11 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     data: string;
     descricao?: string;
   }) => {
-    const ownerId = ensureUserId();
     const idSaida = uuid();
     const idEntrada = uuid();
 
     const txSaida: Transaction = {
       id: idSaida,
-      userId: ownerId,
       data,
       descricao,
       categoria: 'Transferência',
@@ -682,7 +425,6 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
 
     const txEntrada: Transaction = {
       id: idEntrada,
-      userId: ownerId,
       data,
       descricao,
       categoria: 'Transferência',
@@ -694,106 +436,84 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       transferenciaPairId: idSaida,
     };
 
-    await Promise.all([
-      setDoc(getUserDoc('transactions', idSaida), txSaida),
-      setDoc(getUserDoc('transactions', idEntrada), txEntrada),
-    ]);
+    await db.transactions.bulkAdd([txSaida, txEntrada]);
   };
 
-  // ── CRUD Categorias ──────────────────────────────────────────────────────────
-
   const addCategory = async (c: Omit<Categoria, 'id'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
-    const newCat = { ...c, id: newId, userId: ownerId };
-    await setDoc(getUserDoc('categories', newId), newCat);
+    const newCat = stripUndefined({ ...c, id: uuid() });
+    await db.categories.add(newCat);
   };
 
   const updateCategory = async (id: string, c: Partial<Categoria>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('categories', id), c);
+    await db.categories.update(id, stripUndefined(c));
   };
 
   const deleteCategory = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('categories', id));
+    await db.categories.delete(id);
   };
-
-  // ── CRUD Recorrências ────────────────────────────────────────────────────────
 
   const addRecurringTransaction = async (
     r: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>,
   ) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
     const now = new Date().toISOString();
-    const recurring: RecurringTransaction = {
+    const recurring: RecurringTransaction = stripUndefined({
       ...r,
-      id: newId,
-      userId: ownerId,
+      id: uuid(),
       createdAt: now,
       updatedAt: now,
-    };
-
-    await setDoc(getUserDoc('recurringTransactions', newId), recurring);
+    });
+    await db.recurringTransactions.add(recurring);
   };
 
   const updateRecurringTransaction = async (id: string, r: Partial<RecurringTransaction>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('recurringTransactions', id), {
+    await db.recurringTransactions.update(id, stripUndefined({
       ...r,
       updatedAt: new Date().toISOString(),
-    });
+    }));
   };
 
   const deleteRecurringTransaction = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('recurringTransactions', id));
+    await db.recurringTransactions.delete(id);
   };
 
   const toggleRecurringTransaction = async (id: string, active: boolean) => {
     await updateRecurringTransaction(id, { active });
   };
 
-  // ── CRUD Orçamentos ──────────────────────────────────────────────────────────
-
   const upsertCategoryBudget = async (categoryId: string, monthlyLimit: number) => {
-    const ownerId = ensureUserId();
     const normalizedLimit = Number(monthlyLimit);
     const existing = categoryBudgets.find((budget) => budget.categoryId === categoryId);
 
     if (existing) {
-      await updateDoc(getUserDoc('categoryBudgets', existing.id), {
+      await db.categoryBudgets.update(existing.id, {
         monthlyLimit: normalizedLimit,
         updatedAt: new Date().toISOString(),
       });
       return;
     }
 
-    const newId = uuid();
     const now = new Date().toISOString();
     const budget: CategoryBudget = {
-      id: newId,
-      userId: ownerId,
+      id: uuid(),
       categoryId,
       monthlyLimit: normalizedLimit,
       createdAt: now,
       updatedAt: now,
     };
-
-    await setDoc(getUserDoc('categoryBudgets', newId), budget);
+    await db.categoryBudgets.add(budget);
   };
 
   const deleteCategoryBudget = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('categoryBudgets', id));
+    await db.categoryBudgets.delete(id);
   };
 
-  // ── CRUD Config ──────────────────────────────────────────────────────────────
-
   const updateConfig = async (c: Partial<AppConfig>) => {
-    const ownerId = ensureUserId();
-    await setDoc(getUserDoc('config', 'main'), { ...c, userId: ownerId }, { merge: true });
+    const existing = await db.config.get('main');
+    if (existing) {
+      await db.config.update('main', stripUndefined(c));
+    } else {
+      await db.config.add({ id: 'main', metaEconomiaMensal: 1000, isDarkMode: false, themeMode: 'white', ...stripUndefined(c) });
+    }
   };
 
   const setThemeMode = async (themeMode: ThemeMode) => {
@@ -803,207 +523,143 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  // ── CRUD Contas ──────────────────────────────────────────────────────────────
-
   const addConta = async (c: Omit<Conta, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
     const now = new Date().toISOString();
-    const conta: Conta = { ...c, id: newId, userId: ownerId, createdAt: now, updatedAt: now };
-    await setDoc(getUserDoc('contas', newId), conta);
+    await db.contas.add(stripUndefined({ ...c, id: uuid(), createdAt: now, updatedAt: now }));
   };
 
   const updateConta = async (id: string, c: Partial<Conta>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('contas', id), { ...c, updatedAt: new Date().toISOString() });
+    await db.contas.update(id, stripUndefined({ ...c, updatedAt: new Date().toISOString() }));
   };
 
   const deleteConta = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('contas', id));
+    await db.contas.delete(id);
   };
 
-  // ── CRUD Cartões ─────────────────────────────────────────────────────────────
-
   const addCartaoCredito = async (c: Omit<CartaoCredito, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
     const now = new Date().toISOString();
-    const cartao: CartaoCredito = { ...c, id: newId, userId: ownerId, createdAt: now, updatedAt: now };
-    await setDoc(getUserDoc('cartoesCredito', newId), cartao);
+    await db.cartoesCredito.add(stripUndefined({ ...c, id: uuid(), createdAt: now, updatedAt: now }));
   };
 
   const updateCartaoCredito = async (id: string, c: Partial<CartaoCredito>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('cartoesCredito', id), { ...c, updatedAt: new Date().toISOString() });
+    await db.cartoesCredito.update(id, stripUndefined({ ...c, updatedAt: new Date().toISOString() }));
   };
 
   const deleteCartaoCredito = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('cartoesCredito', id));
+    await db.cartoesCredito.delete(id);
   };
 
   const addLoan = async (loan: Omit<Loan, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
     const now = new Date().toISOString();
-    const payload: Loan = {
-      ...loan,
-      id: newId,
-      userId: ownerId,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await setDoc(getUserDoc('loans', newId), payload);
+    await db.loans.add(stripUndefined({ ...loan, id: uuid(), createdAt: now, updatedAt: now }));
   };
 
   const updateLoan = async (id: string, loan: Partial<Loan>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('loans', id), { ...loan, updatedAt: new Date().toISOString() });
+    await db.loans.update(id, stripUndefined({ ...loan, updatedAt: new Date().toISOString() }));
   };
 
   const deleteLoan = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('loans', id));
+    await db.loans.delete(id);
   };
 
   const updateLoanStatus = async (id: string, status: LoanStatus) => {
-    await updateLoan(id, { status });
+    await db.loans.update(id, { status, updatedAt: new Date().toISOString() });
   };
 
-  // ── CRUD Goals ───────────────────────────────────────────────────────────────
+  const pagarFatura = async (cartaoId: string, anoMes: string) => {
+    const cartao = cartoesCredito.find((c) => c.id === cartaoId);
+    if (!cartao) throw new Error('Cartão não encontrado');
+
+    const faturaId = `fatura_${cartaoId}_${anoMes.replace('-', '')}`;
+    const faturaStatus = faturaStatuses.find((f) => f.id === faturaId);
+
+    if (!faturaStatus) {
+      const { dataFechamento, dataVencimento } = calcularPeriodoFatura(cartao, anoMes);
+      await db.faturaStatuses.add({
+        id: faturaId,
+        cartaoId,
+        anoMes,
+        status: 'paga',
+        dataFechamento: format(dataFechamento, 'yyyy-MM-dd'),
+        dataVencimento: format(dataVencimento, 'yyyy-MM-dd'),
+      });
+    } else {
+      await db.faturaStatuses.update(faturaId, { status: 'paga' });
+    }
+
+    const info = getFaturasInfo(anoMes).find((f) => f.cartaoId === cartaoId);
+    if (info) {
+      await addTransaction({
+        data: format(new Date(), 'yyyy-MM-dd'),
+        descricao: `Pagamento Fatura ${cartao.nome} (${anoMes})`,
+        categoria: 'Fatura de Cartão',
+        tipo: 'despesa',
+        valor: info.total,
+        formaPagamento: 'PIX',
+        contaId: cartao.contaDebitoId,
+      });
+    }
+  };
 
   const addGoal = async (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const ownerId = ensureUserId();
-    const newId = uuid();
     const now = new Date().toISOString();
-    const payload: Goal = {
-      ...g,
-      id: newId,
-      userId: ownerId,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await setDoc(getUserDoc('goals', newId), payload);
+    await db.goals.add(stripUndefined({ ...g, id: uuid(), createdAt: now, updatedAt: now }));
   };
 
   const updateGoal = async (id: string, g: Partial<Goal>) => {
-    ensureUserId();
-    await updateDoc(getUserDoc('goals', id), { ...g, updatedAt: new Date().toISOString() });
+    await db.goals.update(id, stripUndefined({ ...g, updatedAt: new Date().toISOString() }));
   };
 
   const deleteGoal = async (id: string) => {
-    ensureUserId();
-    await deleteDoc(getUserDoc('goals', id));
+    await db.goals.delete(id);
   };
 
-  // ── Operações de Fatura ──────────────────────────────────────────────────────
-
-  const pagarFatura = async (cartaoId: string, anoMes: string) => {
-    const ownerId = ensureUserId();
-    const cartao = cartoesCredito.find((c) => c.id === cartaoId);
-    if (!cartao) return;
-
-    const { dataFechamento, dataVencimento } = calcularPeriodoFatura(cartao, anoMes);
-    const faturaId = `fatura_${cartaoId}_${anoMes.replace('-', '')}`;
-
-    const faturasInfo = getFaturasInfo(anoMes);
-    const faturaInfo = faturasInfo.find((f) => f.cartaoId === cartaoId);
-    const totalFatura = faturaInfo?.total ?? 0;
-
-    // Persiste o status como 'paga'
-    const statusDoc: FaturaStatus = {
-      id: faturaId,
-      userId: ownerId,
-      cartaoId,
-      anoMes,
-      status: 'paga',
-      dataFechamento: format(dataFechamento, 'yyyy-MM-dd'),
-      dataVencimento: format(dataVencimento, 'yyyy-MM-dd'),
+  const getBackupSnapshot = useCallback(() => {
+    return {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      app: 'FinDash',
+      data: buildCurrentBackupData(),
     };
-    await setDoc(getUserDoc('faturaStatus', faturaId), statusDoc);
-
-    // Registra saída na conta de débito vinculada (se houver e se total > 0)
-    if (cartao.contaDebitoId && totalFatura > 0) {
-      const txPagamento: Transaction = {
-        id: uuid(),
-        userId: ownerId,
-        data: format(dataVencimento, 'yyyy-MM-dd'),
-        descricao: `Pagamento fatura ${cartao.nome} (${anoMes})`,
-        categoria: 'Fatura de Cartão',
-        tipo: 'despesa',
-        valor: totalFatura,
-        formaPagamento: 'Débito',
-        contaId: cartao.contaDebitoId,
-      };
-      await setDoc(getUserDoc('transactions', txPagamento.id), txPagamento);
-    }
-  };
-
-  useEffect(() => {
-    if (!storageKey) return;
-    const snapshot = createBackupSnapshot(buildCurrentBackupData());
-    saveSnapshotToStorage(storageKey, snapshot);
-  }, [buildCurrentBackupData, storageKey]);
-
-  const getBackupSnapshot = (): FinanceBackupSnapshot => createBackupSnapshot(buildCurrentBackupData());
+  }, [buildCurrentBackupData]);
 
   const restoreBackupSnapshot = async (snapshot: FinanceBackupSnapshot) => {
-    const payload = snapshot.data;
-    setTransactions(payload.transactions);
-    setCategories(payload.categories);
-    setRecurringTransactions(payload.recurringTransactions);
-    setCategoryBudgets(payload.categoryBudgets);
-    setConfig(payload.config);
-    setContas(payload.contas);
-    setCartoesCredito(payload.cartoesCredito);
-    setFaturaStatuses(payload.faturaStatuses);
-    setLoans(payload.loans);
-    setGoals(payload.goals || []);
+    const { data } = snapshot;
+    await db.transaction('rw', [
+      db.transactions,
+      db.categories,
+      db.recurringTransactions,
+      db.categoryBudgets,
+      db.contas,
+      db.cartoesCredito,
+      db.faturaStatuses,
+      db.loans,
+      db.goals,
+      db.config
+    ], async () => {
+      await db.transactions.clear();
+      await db.categories.clear();
+      await db.recurringTransactions.clear();
+      await db.categoryBudgets.clear();
+      await db.contas.clear();
+      await db.cartoesCredito.clear();
+      await db.faturaStatuses.clear();
+      await db.loans.clear();
+      await db.goals.clear();
+      await db.config.clear();
 
-    const normalizedTheme: ThemeMode =
-      payload.config.themeMode || (payload.config.isDarkMode ? 'black' : 'white');
-    applyTheme(normalizedTheme);
-
-    if (storageKey) {
-      saveSnapshotToStorage(storageKey, createBackupSnapshot(payload));
-    }
-
-    if (!userId) return;
-
-    const replaceCollection = async <T extends { id: string }>(
-      collectionName: string,
-      items: T[],
-    ) => {
-      const colRef = getUserCollection<T>(collectionName);
-      const snapshotDocs = await getDocs(colRef);
-      const batch = writeBatch(db);
-
-      snapshotDocs.forEach((docSnap) => {
-        batch.delete(docSnap.ref);
-      });
-
-      items.forEach((item) => {
-        batch.set(getUserDoc(collectionName, item.id), item);
-      });
-
-      await batch.commit();
-    };
-
-    await Promise.all([
-      replaceCollection('transactions', payload.transactions),
-      replaceCollection('categories', payload.categories),
-      replaceCollection('recurringTransactions', payload.recurringTransactions),
-      replaceCollection('categoryBudgets', payload.categoryBudgets),
-      replaceCollection('contas', payload.contas),
-      replaceCollection('cartoesCredito', payload.cartoesCredito),
-      replaceCollection('faturaStatus', payload.faturaStatuses),
-      replaceCollection('loans', payload.loans),
-      replaceCollection('goals', payload.goals || []),
-      setDoc(getUserDoc('config', 'main'), { ...payload.config, userId }),
-    ]);
+      if (data.transactions?.length) await db.transactions.bulkAdd(data.transactions);
+      if (data.categories?.length) await db.categories.bulkAdd(data.categories);
+      if (data.recurringTransactions?.length) await db.recurringTransactions.bulkAdd(data.recurringTransactions);
+      if (data.categoryBudgets?.length) await db.categoryBudgets.bulkAdd(data.categoryBudgets);
+      if (data.contas?.length) await db.contas.bulkAdd(data.contas);
+      if (data.cartoesCredito?.length) await db.cartoesCredito.bulkAdd(data.cartoesCredito);
+      if (data.faturaStatuses?.length) await db.faturaStatuses.bulkAdd(data.faturaStatuses);
+      if (data.loans?.length) await db.loans.bulkAdd(data.loans);
+      if (data.goals?.length) await db.goals.bulkAdd(data.goals);
+      if (data.config) await db.config.add({ ...data.config, id: 'main' });
+    });
   };
-
 
   return (
     <FinanceContext.Provider
@@ -1062,6 +718,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
 
 export const useFinance = () => {
   const context = useContext(FinanceContext);
-  if (!context) throw new Error('useFinance must be used within FinanceProvider');
+  if (context === undefined) {
+    throw new Error('useFinance must be used within a FinanceProvider');
+  }
   return context;
 };

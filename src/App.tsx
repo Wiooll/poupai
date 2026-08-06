@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AuthGate } from './components/AuthGate';
 import { FinanceProvider } from './context/FinanceContext';
 import { AuthProvider } from './context/AuthContext';
@@ -18,29 +18,27 @@ import { getLastSeenVersion, hasUnseenRelease, setLastSeenVersion } from './util
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [lastSeenVersion, setLastSeenVersionState] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLastSeenVersionState(getLastSeenVersion());
-  }, []);
+  const [lastSeenVersion, setLastSeenVersionState] = useState<string | null>(getLastSeenVersion);
 
   const showReleaseNotification = useMemo(
     () => hasUnseenRelease(APP_VERSION, lastSeenVersion),
     [lastSeenVersion],
   );
 
-  useEffect(() => {
-    if (activeTab !== 'updates') return;
-    setLastSeenVersion(APP_VERSION);
-    setLastSeenVersionState(APP_VERSION);
-  }, [activeTab]);
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'updates') {
+      setLastSeenVersion(APP_VERSION);
+      setLastSeenVersionState(APP_VERSION);
+    }
+  };
 
   const currentRelease = getReleaseByVersion(APP_VERSION);
 
   return (
     <Layout
       activeTab={activeTab}
-      setActiveTab={setActiveTab}
+      setActiveTab={handleTabChange}
       releaseNotification={
         showReleaseNotification
           ? {
@@ -49,7 +47,7 @@ function AppContent() {
             }
           : null
       }
-      onOpenUpdates={() => setActiveTab('updates')}
+      onOpenUpdates={() => handleTabChange('updates')}
     >
       {activeTab === 'dashboard' && <Dashboard />}
       {activeTab === 'transactions' && <TransactionsTable />}

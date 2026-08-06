@@ -4,7 +4,7 @@ import type { Goal } from '../types';
 interface GoalModalProps {
   goal: Goal | null;
   onClose: () => void;
-  onSave: (dataOrId: any, dataOpt?: any) => Promise<void>;
+  onSave: (dataOrId: string | Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>, dataOpt?: Partial<Goal>) => Promise<void>;
 }
 
 export function GoalModal({ goal, onClose, onSave }: GoalModalProps) {
