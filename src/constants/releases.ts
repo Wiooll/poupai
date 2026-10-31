@@ -1,4 +1,4 @@
-﻿export interface ReleaseNote {
+export interface ReleaseNote {
   version: string;
   date: string;
   highlights: string[];
@@ -6,6 +6,28 @@
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: '4.8.2',
+    date: '2026-10-29',
+    highlights: [
+      'Assistente de IA atualizado para o modelo Gemini 3.8 Flash.',
+    ],
+    details: [
+      'O modelo gemini-2.5-flash foi substituído pelo gemini-3.8-flash, corrigindo erros de chamada à API após nova descontinuação.',
+      'O endpoint REST da API do Gemini também foi atualizado para o novo identificador de modelo.',
+    ],
+  },
+  {
+    version: '4.8.1',
+    date: '2026-10-29',
+    highlights: [
+      'Assistente de IA atualizado para o modelo Gemini 2.5 Flash.',
+    ],
+    details: [
+      'O modelo gemini-1.5-flash foi substituído pelo gemini-2.5-flash, corrigindo erros de chamada à API após descontinuação do modelo anterior.',
+      'O endpoint REST da API do Gemini também foi atualizado para refletir o novo identificador de modelo.',
+    ],
+  },
   {
     version: '4.6.0',
     date: '2026-04-30',

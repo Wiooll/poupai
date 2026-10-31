@@ -63,6 +63,8 @@ export interface AppConfig {
   metaEconomiaMensal: number;
   isDarkMode: boolean;
   themeMode?: ThemeMode;
+  aiApiKey?: string;
+  aiProvider?: 'openai' | 'gemini';
 }
 
 // Sprint 2: Conta/Carteira

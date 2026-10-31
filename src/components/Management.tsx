@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download } from 'lucide-react';
+import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { isValidBackupSnapshot } from '../utils/localPersistence';
 import { getPartnerPromotionConfig } from '../utils/partnerPromotion';
-import type { FinanceBackupSnapshot } from '../types';
+import type { FinanceBackupSnapshot, AppConfig } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
 const SUPPORT_PIX_KEY = import.meta.env.VITE_SUPPORT_PIX_KEY?.trim() || '';
@@ -208,6 +208,17 @@ export function Management() {
 
       <section className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={18} className="text-primary" />
+          <h3 className="font-semibold">Configurações de IA</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Configure sua chave de API para usar o Assistente Financeiro Inteligente. A chave é armazenada apenas localmente no seu navegador.
+        </p>
+        <AIConfigForm />
+      </section>
+
+      <section className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
           <FileText size={18} className="text-primary" />
           <h3 className="font-semibold">Documentos Legais</h3>
         </div>
@@ -283,6 +294,80 @@ export function Management() {
             </p>
           )}
         </section>
+      )}
+    </div>
+  );
+}
+
+function AIConfigForm() {
+  const { config, updateConfig } = useFinance();
+  const [aiApiKey, setAiApiKey] = useState(config.aiApiKey || '');
+  const [aiProvider, setAiProvider] = useState<AppConfig['aiProvider']>(config.aiProvider || 'openai');
+  const [showKey, setShowKey] = useState(false);
+  const [message, setMessage] = useState<string>('');
+
+  const handleSave = async () => {
+    if (!aiApiKey.trim()) {
+      setMessage('Por favor, insira a chave de API.');
+      return;
+    }
+    try {
+      await updateConfig({ aiApiKey: aiApiKey.trim(), aiProvider });
+      setMessage('Configurações salvas com sucesso.');
+    } catch {
+      setMessage('Erro ao salvar configurações.');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Provedor de IA</label>
+        <select
+          value={aiProvider || 'openai'}
+          onChange={(e) => setAiProvider(e.target.value as AppConfig['aiProvider'])}
+          className="w-full sm:w-64 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Chave de API</label>
+        <div className="relative">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={aiApiKey}
+            onChange={(e) => setAiApiKey(e.target.value)}
+            placeholder={config.aiApiKey ? '••••••••••••••••' : 'Insira sua chave de API'}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={showKey ? 'Ocultar chave' : 'Mostrar chave'}
+          >
+            {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          A chave é armazenada localmente no seu navegador e nunca é enviada para servidores externos.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSave}
+        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        <Key size={16} />
+        Salvar configurações
+      </button>
+
+      {message && (
+        <p className="text-sm text-primary">{message}</p>
       )}
     </div>
   );

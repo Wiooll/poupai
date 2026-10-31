@@ -21,6 +21,7 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { APP_NAME, APP_VERSION } from '../constants/app';
 import { cn } from '../utils/lib';
+import { AiChatWidget } from './AiChatWidget';
 import { MobileBottomNav } from './MobileBottomNav';
 import { buildCopyrightText } from '../utils/uiPreferences';
 
@@ -172,6 +173,7 @@ export const Layout = ({
       </div>
 
       <MobileBottomNav items={menuItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <AiChatWidget />
 
       <main className="flex-1 p-4 pb-28 md:p-8 md:pb-8 overflow-y-auto w-full max-w-[1600px] mx-auto min-h-[calc(100dvh-60px)]">
         {releaseNotification && (

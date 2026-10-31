@@ -175,6 +175,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     metaEconomiaMensal: 1000,
     isDarkMode: false,
     themeMode: 'white',
+    aiApiKey: undefined,
+    aiProvider: undefined,
   };
 
   const applyTheme = useCallback((themeMode: ThemeMode) => {
@@ -198,6 +200,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           metaEconomiaMensal: 1000,
           isDarkMode: false,
           themeMode: 'white',
+          aiApiKey: undefined,
+          aiProvider: undefined,
         });
       }
     };
