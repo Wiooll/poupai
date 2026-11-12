@@ -14,5 +14,5 @@
 
 - [x] 3.1 Executar `npm run check:text-ptbr-ui` e `npm run check:text-encoding`
 - [x] 3.2 Executar lint e build (`npm run build`)
-- [ ] 3.3 Validar manualmente: trocar provedor e conferir destino do link e abertura em nova aba
+- [x] 3.3 Validar manualmente: trocar provedor e conferir destino do link e abertura em nova aba
 - [x] 3.4 Gerar resumo das alterações para a descrição do commit (pt-br)
