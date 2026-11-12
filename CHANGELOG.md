@@ -1,3 +1,9 @@
+## [4.11.1] - 2026-11-12
+
+### Corrigido
+- Ao adicionar uma transação sem nenhuma conta (ou cartão) cadastrada, o erro "Selecione a conta para esta transação." não aparece mais; a conta/cartão só é exigida quando existe ao menos um cadastrado.
+- Versão da aplicação atualizada para `4.11.1`.
+
 ## [4.11.0] - 2026-11-12
 
 ### Alterado

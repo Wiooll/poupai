@@ -7,6 +7,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.11.1',
+    date: '2026-11-12',
+    highlights: [
+      'Corrigido o erro ao adicionar uma transação quando ainda não há conta cadastrada.',
+    ],
+    details: [
+      'A conta ou o cartão só são exigidos se você já tiver ao menos um cadastrado.',
+    ],
+  },
+  {
     version: '4.11.0',
     date: '2026-11-12',
     highlights: [

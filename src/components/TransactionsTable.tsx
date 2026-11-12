@@ -53,7 +53,11 @@ const emptyAddForm = (categories: { nome: string }[]): Partial<Transaction> & {
   numParcelas: 2,
 });
 
-const getValidationError = (form: Partial<Transaction> & { parcelado?: boolean; numParcelas?: number }) => {
+const getValidationError = (
+  form: Partial<Transaction> & { parcelado?: boolean; numParcelas?: number },
+  hasContas: boolean,
+  hasCartoes: boolean,
+) => {
   if (!form.data || Number.isNaN(parseISO(form.data).getTime())) {
     return 'Informe uma data válida no formato YYYY-MM-DD.';
   }
@@ -74,10 +78,11 @@ const getValidationError = (form: Partial<Transaction> & { parcelado?: boolean; 
   }
 
   const isCartaoPagamento = form.formaPagamento === 'Cartão de crédito';
-  if (isCartaoPagamento && !form.cartaoId) {
+  // Só exige cartão/conta quando já existem cadastrados; senão o seletor nem é exibido.
+  if (isCartaoPagamento && hasCartoes && !form.cartaoId) {
     return 'Selecione o cartão de crédito para esta transação.';
   }
-  if (!isCartaoPagamento && !form.contaId) {
+  if (!isCartaoPagamento && hasContas && !form.contaId) {
     return 'Selecione a conta para esta transação.';
   }
 
@@ -160,7 +165,11 @@ export const TransactionsTable = () => {
 
   const handleEditSave = async () => {
     if (editingId && editForm) {
-      const error = getValidationError({ ...editForm, parcelado: false });
+      const error = getValidationError(
+        { ...editForm, parcelado: false },
+        contas.length > 0,
+        cartoesCredito.length > 0,
+      );
       if (error) {
         setFormError(error);
         return;
@@ -181,7 +190,7 @@ export const TransactionsTable = () => {
   };
 
   const handleAddSave = async () => {
-    const error = getValidationError(addForm);
+    const error = getValidationError(addForm, contas.length > 0, cartoesCredito.length > 0);
     if (error) {
       setFormError(error);
       return;
