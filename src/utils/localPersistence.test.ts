@@ -21,6 +21,15 @@ describe('localPersistence', () => {
     expect(isValidBackupSnapshot(snapshot)).toBe(true);
   });
 
+  it('grava o nome PoupAi nos novos backups', () => {
+    expect(createBackupSnapshot(mockData).app).toBe('PoupAi');
+  });
+
+  it('aceita backup antigo gerado como FinDash', () => {
+    const legado = { ...createBackupSnapshot(mockData), app: 'FinDash' };
+    expect(isValidBackupSnapshot(legado)).toBe(true);
+  });
+
   it('invalida snapshot sem estrutura esperada', () => {
     expect(isValidBackupSnapshot({ foo: 'bar' })).toBe(false);
   });

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { APP_NAME } from '../constants/app';
 import { db } from '../services/db';
 import type {
   AppConfig,
@@ -651,7 +652,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     return {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
-      app: 'FinDash',
+      app: APP_NAME,
       data: buildCurrentBackupData(),
     };
   }, [buildCurrentBackupData]);

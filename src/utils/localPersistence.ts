@@ -1,3 +1,4 @@
+import { APP_NAME } from '../constants/app';
 import type { FinanceBackupData, FinanceBackupSnapshot } from '../types';
 
 
@@ -7,7 +8,7 @@ const SNAPSHOT_VERSION = '1.0.0';
 export const createBackupSnapshot = (data: FinanceBackupData): FinanceBackupSnapshot => ({
   version: SNAPSHOT_VERSION,
   exportedAt: new Date().toISOString(),
-  app: 'FinDash',
+  app: APP_NAME,
   data,
 });
 

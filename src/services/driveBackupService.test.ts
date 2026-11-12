@@ -8,7 +8,7 @@ const token: DriveToken = { accessToken: 'token-teste', expiresAt: Date.now() + 
 const snapshot: FinanceBackupSnapshot = {
   version: '1.0.0',
   exportedAt: '2026-01-02T10:00:00.000Z',
-  app: 'FinDash',
+  app: 'PoupAi',
   data: {
     transactions: [],
     categories: [],

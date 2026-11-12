@@ -29,7 +29,7 @@ const BENEFICIOS = [
 const PERGUNTAS_FREQUENTES = [
   {
     question: 'Preciso pagar para usar?',
-    answer: 'Não. Atualmente o FinDash está disponível sem custos para uso pessoal.',
+    answer: `Não. Atualmente o ${APP_NAME} está disponível sem custos para uso pessoal.`,
   },
   {
     question: 'Meus dados ficam separados por usuário?',

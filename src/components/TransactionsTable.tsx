@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { APP_NAME } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import type { Transaction, TransactionType, PaymentMethod } from '../types';
 import {
@@ -89,7 +90,7 @@ const getValidationError = (form: Partial<Transaction> & { parcelado?: boolean; 
 
 const getExportFileBase = (mode: ExportMode) => {
   const now = format(new Date(), 'yyyyMMdd_HHmm');
-  return `findash_${mode}_${now}`;
+  return `${APP_NAME.toLowerCase()}_${mode}_${now}`;
 };
 
 const genericSaveError = 'Não foi possível salvar os dados agora. Tente novamente.';

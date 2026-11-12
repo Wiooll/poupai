@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns';
+import { APP_NAME } from '../constants/app';
 import type { PaymentMethod, Transaction, TransactionType } from '../types';
 
 export type ExportMode = 'resumo' | 'detalhado';
@@ -368,7 +369,7 @@ export const exportTransactionsPdf = (transactions: Transaction[], mode: ExportM
   popup.document.write(`
     <html>
       <head>
-        <title>Relatório FinDash</title>
+        <title>Relatório ${APP_NAME}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 16px; color: #111; }
           h1 { font-size: 20px; margin-bottom: 4px; }
@@ -378,7 +379,7 @@ export const exportTransactionsPdf = (transactions: Transaction[], mode: ExportM
         </style>
       </head>
       <body>
-        <h1>FinDash - Exportação ${mode === 'resumo' ? 'Resumo' : 'Detalhada'}</h1>
+        <h1>${APP_NAME} - Exportação ${mode === 'resumo' ? 'Resumo' : 'Detalhada'}</h1>
         <p>Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
         <table>
           <thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead>

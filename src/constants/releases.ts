@@ -7,6 +7,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.11.0',
+    date: '2026-11-12',
+    highlights: [
+      'O app agora se chama PoupAi.',
+      'O novo nome aparece na interface, nos arquivos exportados e nos e-mails de feedback.',
+    ],
+    details: [
+      'Seus dados e backups existentes continuam funcionando normalmente, sem nenhuma ação necessária.',
+      'Backups antigos (gerados como FinDash) podem ser restaurados sem problemas.',
+    ],
+  },
+  {
     version: '4.10.1',
     date: '2026-11-12',
     highlights: [

@@ -1,3 +1,13 @@
+## [4.11.0] - 2026-11-12
+
+### Alterado
+- Aplicativo renomeado de FinDash para **PoupAi** na interface, título da página, assistente de IA, termos e privacidade, e-mails de feedback, relatório de exportação e rodapé.
+- Nomes de arquivos exportados agora usam `poupai_...` e `poupai-backup-AAAA-MM-DD.json`; novos backups gravam `app: "PoupAi"`.
+- Textos de interface passam a usar a constante `APP_NAME`.
+- Pacote renomeado para `poupai`.
+- Identificadores internos (`FinDashDB`, chaves `findash_*`/`findash:*` e `findash-backup.json` no Drive) foram mantidos para não perder dados nem backups existentes; backups antigos com `app: "FinDash"` continuam válidos.
+- Versão da aplicação atualizada para `4.11.0`.
+
 ## [4.10.1] - 2026-11-12
 
 ### Alterado

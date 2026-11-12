@@ -1,6 +1,8 @@
-# FinDash | Seu Dashboard Financeiro
+# PoupAi | Seu Dashboard Financeiro
 
-O **FinDash** é um dashboard moderno, interativo e responsivo para controle de despesas e finanças pessoais.
+> Versão atual: **4.11.0**. O app foi renomeado de FinDash para PoupAi. Por compatibilidade com dados e backups já existentes, os identificadores internos continuam com o prefixo `findash` (banco `FinDashDB`, chaves `findash_*`/`findash:*` do navegador e o arquivo `findash-backup.json` no Google Drive). Backups antigos continuam sendo restaurados normalmente.
+
+O **PoupAi** é um dashboard moderno, interativo e responsivo para controle de despesas e finanças pessoais.
 
 ## Funcionalidades principais
 

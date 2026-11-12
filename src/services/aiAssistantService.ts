@@ -1,3 +1,4 @@
+import { APP_NAME } from '../constants/app';
 import type {
   Transaction,
   Categoria,
@@ -479,7 +480,7 @@ function buildSystemPrompt(context: AIContext): string {
   const today = getLocalDateString();
   const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  return `Você é um assistente financeiro inteligente do aplicativo FinDash.
+  return `Você é um assistente financeiro inteligente do aplicativo ${APP_NAME}.
 Hoje é ${today} (${currentMonth}).
 
 ## Contexto Financeiro do Usuário
