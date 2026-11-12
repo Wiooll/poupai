@@ -51,7 +51,7 @@ const mapAuthError = (error: unknown) => {
     return 'Já existe conta com este e-mail em outro provedor.';
   }
   if (code.includes('auth/operation-not-allowed')) {
-    return 'Login com Google não habilitado no Firebase.';
+    return 'Login com Google não está habilitado.';
   }
   if (code.includes('auth/too-many-requests')) {
     return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
@@ -263,7 +263,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
         )}
 
         <footer className="text-center text-xs text-muted-foreground">
-          {APP_NAME} v{APP_VERSION} • Dados sincronizados com Firebase
+          {APP_NAME} v{APP_VERSION} • Dados salvos localmente no seu navegador
         </footer>
       </main>
     </div>

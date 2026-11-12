@@ -80,7 +80,47 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 3. O link aceita apenas URLs `http` ou `https`.
 4. Reinicie o app (`npm run dev`) após atualizar variáveis de ambiente.
 
+## Backup automático no Google Drive (opcional)
+
+O recurso vem **desativado por padrão**. Sem configuração, o app não carrega scripts nem faz requisições ao Google.
+
+1. No Google Cloud, crie um OAuth Client ID do tipo **Aplicativo da Web**, habilite a **Google Drive API** e inclua a origem do app (ex.: `http://localhost:5173`) em "Origens JavaScript autorizadas".
+2. Configure no `.env.local`:
+
+```bash
+VITE_DRIVE_SYNC_ENABLED=true
+VITE_GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
+```
+
+3. Reinicie o app e use o card **Backup automático no Google Drive** em **Gerenciamento**.
+
+Como funciona:
+
+- Escopo mínimo `drive.appdata`: o app só acessa o próprio arquivo oculto (`findash-backup.json`).
+- O token de acesso fica apenas em memória. Só um indicador de "já autorizado" (sem token) é guardado no navegador.
+- Após recarregar, o app tenta reconectar em silêncio, depois que os dados locais carregam. Se o Google ou o navegador exigirem interação, use **Reconectar ao Google Drive**.
+- A tela de consentimento aparece apenas na primeira autorização.
+- Cada alteração agenda o envio do backup (5 s de debounce, com até 2 novas tentativas em falhas de rede).
+- Conflito: vence o backup com data mais recente; em empate, o local. Dispositivo sem dados aceita o backup do Drive.
+- Restauração automática é opcional. Se o Drive estiver mais recente e ela estiver desligada, o envio fica pausado até você restaurar ou usar **Sincronizar agora**.
+- Falhas no Drive nunca bloqueiam o uso local.
+
+Arquivos principais: `src/services/driveBackupService.ts`, `src/services/localChangeTracker.ts`, `src/utils/backupConflict.ts`, `src/context/DriveSyncContext.tsx` e `src/components/DriveSyncCard.tsx`.
+
 ## Atualizações recentes
+
+### Sprint 4.10.1 - Reconexão do Drive
+
+- Consentimento do Google solicitado só na primeira autorização.
+- Reconexão silenciosa ao abrir o app, após o carregamento do banco local.
+- Botão **Reconectar ao Google Drive** quando for necessária interação.
+
+### Sprint 4.10.0 - Backup Automático no Google Drive
+
+- Novo card **Backup automático no Google Drive** em **Gerenciamento**, opcional e desativado por padrão.
+- Sincronização automática com debounce, retry leve, status e data da última sincronização.
+- Restauração automática opcional com regra "mais recente vence".
+- Limpeza de resquícios textuais de Firebase/Firestore.
 
 ### Sprint 4.9.1 - Correção de Lançamentos pelo Assistente de IA
 

@@ -7,6 +7,7 @@ import { getPartnerPromotionConfig } from '../utils/partnerPromotion';
 import { listAvailableModels, testAIConnection } from '../services/aiAssistantService';
 import type { AIModelOption } from '../services/aiAssistantService';
 import type { FinanceBackupSnapshot, AppConfig } from '../types';
+import { DriveSyncCard } from './DriveSyncCard';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
 
@@ -124,7 +125,7 @@ export function Management() {
             <h3 className="font-semibold">Backup Manual</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
-            Os dados ficam salvos no navegador (localStorage) com opção de backup manual no Google Drive.
+            Os dados ficam salvos no navegador (IndexedDB). Exporte um arquivo JSON para guardar uma cópia manual.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 mb-2">
             <button
@@ -158,6 +159,8 @@ export function Management() {
             Abrir Google Drive para enviar ou baixar seus arquivos de backup
           </a>
         </article>
+
+        <DriveSyncCard />
 
         <article className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">

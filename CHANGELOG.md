@@ -1,3 +1,25 @@
+## [4.10.1] - 2026-11-12
+
+### Alterado
+- Backup no Drive: a tela de consentimento só aparece na primeira autorização; depois a conexão usa `prompt` vazio.
+- Ao abrir o app, tenta reconectar ao Drive em silêncio se já houve autorização, após o banco local carregar.
+- Card do Drive exibe "Reconectar ao Google Drive" quando já houve autorização anterior.
+- `FinanceContext` passa a expor `isDataLoaded`.
+- Versão da aplicação atualizada para `4.10.1`.
+
+## [4.10.0] - 2026-11-12
+
+### Adicionado
+- Backup automático opcional no Google Drive (aba **Gerenciamento**), com escopo `drive.appdata`, debounce de 5 s, retry leve e status (sincronizado, pendente, sincronizando, erro) com última sincronização.
+- Restauração automática opcional ao conectar, com regra "mais recente vence" (`exportedAt`); empate mantém o local e dispositivo sem dados aceita o backup remoto.
+- Variáveis `VITE_DRIVE_SYNC_ENABLED` e `VITE_GOOGLE_CLIENT_ID` (recurso desativado por padrão).
+- Testes para a regra de conflito e para o serviço do Drive.
+
+### Alterado
+- Removidos resquícios textuais de Firebase/Firestore (rodapé, mensagem de login e comentário) e as variáveis `VITE_FIREBASE_*` do `.env.example`.
+- Texto do card **Backup Manual** corrigido para refletir o armazenamento em IndexedDB.
+- Versão da aplicação atualizada para `4.10.0`.
+
 ## [4.9.1] - 2026-11-12
 
 ### Corrigido

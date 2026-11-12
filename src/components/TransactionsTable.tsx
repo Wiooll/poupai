@@ -187,7 +187,7 @@ export const TransactionsTable = () => {
     }
 
     // Monta o objeto sem incluir campos opcionais com valor undefined,
-    // pois o Firestore rejeita campos explicitamente undefined.
+    // para manter o registro limpo no armazenamento local e no backup JSON.
     const isCartaoPagamento = addForm.formaPagamento === 'Cartão de crédito';
     const base: Omit<Transaction, 'id' | 'parcelaAtual' | 'totalParcelas' | 'parcelaGrupoId'> = {
       data: addForm.data!,

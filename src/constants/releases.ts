@@ -7,6 +7,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.10.1',
+    date: '2026-11-12',
+    highlights: [
+      'Backup no Google Drive: quem já autorizou não vê mais a tela de permissão a cada conexão.',
+      'Ao abrir o app, ele tenta reconectar ao Drive automaticamente.',
+    ],
+    details: [
+      'Se o Google ou o navegador pedirem interação, o card em Gerenciamento mostra o botão "Reconectar ao Google Drive".',
+      'A reconexão só acontece depois que seus dados locais terminam de carregar.',
+    ],
+  },
+  {
+    version: '4.10.0',
+    date: '2026-11-12',
+    highlights: [
+      'Novo backup automático opcional no Google Drive, na aba Gerenciamento.',
+      'Seus dados continuam salvos no navegador; o Drive é só uma cópia de segurança.',
+    ],
+    details: [
+      'O app usa uma pasta oculta no seu Drive e não acessa seus outros arquivos.',
+      'Após cada alteração, o backup é enviado automaticamente. Você acompanha o status e a última sincronização.',
+      'Ao conectar, o backup mais recente prevalece. A restauração automática é opcional.',
+      'Se o Drive falhar, você continua usando o app normalmente.',
+    ],
+  },
+  {
     version: '4.9.1',
     date: '2026-11-12',
     highlights: [

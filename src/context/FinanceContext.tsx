@@ -45,6 +45,8 @@ interface FinanceContextType {
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
   goals: Goal[];
+  /** `true` quando todas as leituras iniciais do banco local terminaram. */
+  isDataLoaded: boolean;
 
   addGoal: (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateGoal: (id: string, g: Partial<Goal>) => Promise<void>;
@@ -160,16 +162,41 @@ const stripUndefined = <T extends object>(obj: T): T =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 export const FinanceProvider = ({ children }: { children: ReactNode }) => {
-  const transactions = useLiveQuery(() => db.transactions.toArray()) || [];
-  const categories = useLiveQuery(() => db.categories.toArray()) || defaultCategories;
-  const recurringTransactions = useLiveQuery(() => db.recurringTransactions.toArray()) || [];
-  const categoryBudgets = useLiveQuery(() => db.categoryBudgets.toArray()) || [];
-  const contas = useLiveQuery(() => db.contas.toArray()) || [];
-  const cartoesCredito = useLiveQuery(() => db.cartoesCredito.toArray()) || [];
-  const faturaStatuses = useLiveQuery(() => db.faturaStatuses.toArray()) || [];
-  const loans = useLiveQuery(() => db.loans.toArray()) || [];
-  const goals = useLiveQuery(() => db.goals.toArray()) || [];
-  const configArr = useLiveQuery(() => db.config.toArray()) || [];
+  // `useLiveQuery` retorna `undefined` até a primeira leitura do Dexie terminar.
+  const transactionsQuery = useLiveQuery(() => db.transactions.toArray());
+  const categoriesQuery = useLiveQuery(() => db.categories.toArray());
+  const recurringQuery = useLiveQuery(() => db.recurringTransactions.toArray());
+  const categoryBudgetsQuery = useLiveQuery(() => db.categoryBudgets.toArray());
+  const contasQuery = useLiveQuery(() => db.contas.toArray());
+  const cartoesQuery = useLiveQuery(() => db.cartoesCredito.toArray());
+  const faturaStatusesQuery = useLiveQuery(() => db.faturaStatuses.toArray());
+  const loansQuery = useLiveQuery(() => db.loans.toArray());
+  const goalsQuery = useLiveQuery(() => db.goals.toArray());
+  const configQuery = useLiveQuery(() => db.config.toArray());
+
+  const isDataLoaded = [
+    transactionsQuery,
+    categoriesQuery,
+    recurringQuery,
+    categoryBudgetsQuery,
+    contasQuery,
+    cartoesQuery,
+    faturaStatusesQuery,
+    loansQuery,
+    goalsQuery,
+    configQuery,
+  ].every((result) => result !== undefined);
+
+  const transactions = transactionsQuery || [];
+  const categories = categoriesQuery || defaultCategories;
+  const recurringTransactions = recurringQuery || [];
+  const categoryBudgets = categoryBudgetsQuery || [];
+  const contas = contasQuery || [];
+  const cartoesCredito = cartoesQuery || [];
+  const faturaStatuses = faturaStatusesQuery || [];
+  const loans = loansQuery || [];
+  const goals = goalsQuery || [];
+  const configArr = configQuery || [];
 
   const config: AppConfig = configArr.find((c) => c.id === 'main') || {
     metaEconomiaMensal: 1000,
@@ -680,6 +707,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         faturaStatuses,
         loans,
         goals,
+        isDataLoaded,
         addGoal,
         updateGoal,
         deleteGoal,
