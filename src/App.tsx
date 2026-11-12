@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { AuthGate } from './components/AuthGate';
 import { FinanceProvider } from './context/FinanceContext';
 import { AuthProvider } from './context/AuthContext';
+import { DriveSyncProvider } from './context/DriveSyncContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { TransactionsTable } from './components/TransactionsTable';
@@ -67,7 +68,9 @@ function App() {
     <AuthProvider>
       <AuthGate>
         <FinanceProvider>
-          <AppContent />
+          <DriveSyncProvider>
+            <AppContent />
+          </DriveSyncProvider>
         </FinanceProvider>
       </AuthGate>
     </AuthProvider>

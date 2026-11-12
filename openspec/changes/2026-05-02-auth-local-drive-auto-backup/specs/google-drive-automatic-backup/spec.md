@@ -1,32 +1,48 @@
 ## ADDED Requirements
 
-### Requirement: Backup automatico no Google Drive
-O sistema SHALL sincronizar automaticamente o snapshot de dados locais do usuario autenticado para um arquivo de backup no Google Drive da propria conta.
+### Requirement: Backup automático opcional no Google Drive
+O sistema SHALL, quando o usuário conectar sua conta Google, sincronizar automaticamente o snapshot de backup para um arquivo oculto do app (`appDataFolder`) no Drive da própria conta.
 
-#### Scenario: Sincronizacao apos alteracao de dados
-- **WHEN** ocorrer alteracao de dados financeiros locais
-- **THEN** o sistema agenda upload automatico do snapshot para o Google Drive
-- **AND** aplica debounce para evitar excesso de requisicoes
+#### Scenario: Sincronização após alteração de dados
+- **WHEN** ocorrer alteração de dados financeiros com o Drive conectado
+- **THEN** o sistema agenda upload do snapshot com debounce
+- **AND** exibe o estado "pendente" até concluir e "sincronizado" com a data da última sincronização
 
-### Requirement: Restauracao automatica opcional no login
-O sistema SHALL permitir restauracao automatica no login com base no backup remoto quando habilitado.
+#### Scenario: Recurso não configurado
+- **WHEN** não houver Client ID configurado ou a flag estiver desativada
+- **THEN** o sistema não carrega scripts externos nem faz requisições ao Google
+- **AND** a interface informa que o recurso está indisponível
+
+### Requirement: Mínimo privilégio e proteção de credenciais
+O sistema MUST solicitar apenas o escopo `drive.appdata` e MUST manter o token de acesso somente em memória.
+
+#### Scenario: Token não persistido
+- **WHEN** a página for recarregada
+- **THEN** nenhum token é recuperado do armazenamento local
+- **AND** o usuário precisa reconectar para retomar a sincronização
+
+### Requirement: Restauração automática opcional
+O sistema SHALL permitir restauração automática ao conectar, quando habilitada pelo usuário.
 
 #### Scenario: Backup remoto mais recente
-- **WHEN** a restauracao automatica estiver habilitada e o backup remoto for mais recente que o local
-- **THEN** o sistema restaura o backup remoto e atualiza o estado local
+- **WHEN** a restauração automática estiver habilitada e o backup remoto for válido e mais recente que o local
+- **THEN** o sistema restaura o backup remoto nos dados locais
 
-### Requirement: Resolucao de conflito previsivel
-O sistema MUST aplicar regra deterministica de conflito entre snapshot local e remoto.
+### Requirement: Resolução de conflito previsível
+O sistema MUST manter o snapshot com `exportedAt` mais recente e, em empate, o local.
 
-#### Scenario: Conflito local vs remoto
-- **WHEN** houver snapshots local e remoto validos com timestamps diferentes
-- **THEN** o sistema deve manter o snapshot mais recente (`exportedAt`)
-- **AND** em empate deve manter o snapshot local
+#### Scenario: Snapshots com datas diferentes
+- **WHEN** houver snapshot local e remoto válidos com `exportedAt` diferentes
+- **THEN** o mais recente prevalece
 
-### Requirement: Falha de sincronizacao nao bloqueante
-O sistema MUST manter operacao local mesmo quando a sincronizacao com Drive falhar.
+#### Scenario: Snapshot remoto inválido
+- **WHEN** o arquivo remoto não passar na validação de estrutura
+- **THEN** o sistema ignora o remoto, mantém o local e informa erro recuperável
 
-#### Scenario: Erro no upload automatico
-- **WHEN** ocorrer falha de autenticacao, permissao ou rede na sincronizacao
-- **THEN** o sistema nao deve perder dados locais
-- **AND** deve exibir estado de erro recuperavel ao usuario
+### Requirement: Falha de sincronização não bloqueante
+O sistema MUST manter a operação local quando a sincronização falhar.
+
+#### Scenario: Erro de rede, permissão ou token expirado
+- **WHEN** ocorrer falha no upload ou download
+- **THEN** nenhum dado local é perdido ou alterado
+- **AND** o sistema mostra estado de erro com opção de tentar novamente ou reconectar

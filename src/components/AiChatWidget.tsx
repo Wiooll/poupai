@@ -8,6 +8,7 @@ import {
   CheckCircle,
   HelpCircle,
 } from 'lucide-react';
+import { APP_NAME } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { processAIMessage, type AIActionProposal } from '../services/aiAssistantService';
 import type { Transaction } from '../types';
@@ -303,7 +304,7 @@ export function AiChatWidget() {
                 <Sparkles size={18} className="text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-sm">Assistente FinDash</p>
+                <p className="font-semibold text-sm">Assistente {APP_NAME}</p>
                 <p className="text-xs text-muted-foreground">Powered by IA</p>
               </div>
             </div>

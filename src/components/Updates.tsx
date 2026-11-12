@@ -1,4 +1,5 @@
 import { Megaphone } from 'lucide-react';
+import { APP_NAME } from '../constants/app';
 import { RELEASE_NOTES } from '../constants/releases';
 
 export function Updates() {
@@ -10,7 +11,7 @@ export function Updates() {
           <h2 className="text-xl font-semibold">Atualizações</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Confira os recursos mais recentes do FinDash e as melhorias de cada versão.
+          Confira os recursos mais recentes do {APP_NAME} e as melhorias de cada versão.
         </p>
       </section>
 

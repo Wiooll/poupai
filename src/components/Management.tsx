@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react';
 import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
-import { APP_VERSION } from '../constants/app';
+import { APP_NAME, APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { isValidBackupSnapshot } from '../utils/localPersistence';
 import { getPartnerPromotionConfig } from '../utils/partnerPromotion';
 import { listAvailableModels, testAIConnection } from '../services/aiAssistantService';
 import type { AIModelOption } from '../services/aiAssistantService';
 import type { FinanceBackupSnapshot, AppConfig } from '../types';
+import { DriveSyncCard } from './DriveSyncCard';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
 
@@ -18,10 +19,10 @@ const SUPPORT_PIX_KEY = import.meta.env.VITE_SUPPORT_PIX_KEY?.trim() || '';
 const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env as Record<string, string | undefined>);
 
 const createMailtoLink = (type: 'suggestion' | 'bug') => {
-  const subject = type === 'suggestion' ? '[FinDash] Sugestão' : '[FinDash] Bug';
+  const subject = type === 'suggestion' ? `[${APP_NAME}] Sugestão` : `[${APP_NAME}] Bug`;
   const body = type === 'suggestion'
-    ? `Olá, equipe FinDash!%0D%0A%0D%0ADeixo abaixo minha sugestão:%0D%0A%0D%0A%0D%0AVersão do app: ${APP_VERSION}`
-    : `Olá, equipe FinDash!%0D%0A%0D%0AIdentifiquei um bug com os detalhes abaixo:%0D%0A1. Passos para reproduzir:%0D%0A2. Resultado esperado:%0D%0A3. Resultado atual:%0D%0A%0D%0AVersão do app: ${APP_VERSION}`;
+    ? `Olá, equipe ${APP_NAME}!%0D%0A%0D%0ADeixo abaixo minha sugestão:%0D%0A%0D%0A%0D%0AVersão do app: ${APP_VERSION}`
+    : `Olá, equipe ${APP_NAME}!%0D%0A%0D%0AIdentifiquei um bug com os detalhes abaixo:%0D%0A1. Passos para reproduzir:%0D%0A2. Resultado esperado:%0D%0A3. Resultado atual:%0D%0A%0D%0AVersão do app: ${APP_VERSION}`;
   return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${body}`;
 };
 
@@ -55,7 +56,7 @@ export function Management() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `findash-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `${APP_NAME.toLowerCase()}-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setMessage('Backup exportado com sucesso.');
@@ -124,7 +125,7 @@ export function Management() {
             <h3 className="font-semibold">Backup Manual</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
-            Os dados ficam salvos no navegador (localStorage) com opção de backup manual no Google Drive.
+            Os dados ficam salvos no navegador (IndexedDB). Exporte um arquivo JSON para guardar uma cópia manual.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 mb-2">
             <button
@@ -159,10 +160,12 @@ export function Management() {
           </a>
         </article>
 
+        <DriveSyncCard />
+
         <article className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
             <HandHeart size={18} className="text-primary" />
-            <h3 className="font-semibold">Apoie o FinDash</h3>
+            <h3 className="font-semibold">Apoie o {APP_NAME}</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
             Sua contribuição ajuda a manter melhorias, correções e novos recursos.
@@ -282,14 +285,14 @@ export function Management() {
           <p className="text-xs text-muted-foreground">Última atualização: 30/04/2026</p>
           {legalDoc === 'terms' && (
             <p className="text-sm text-muted-foreground">
-              Ao utilizar o FinDash, você concorda em usar a aplicação de forma lícita e responsável.
+              Ao utilizar o {APP_NAME}, você concorda em usar a aplicação de forma lícita e responsável.
               O serviço é fornecido para organização financeira pessoal, sem promessa de aconselhamento
               financeiro profissional.
             </p>
           )}
           {legalDoc === 'privacy' && (
             <p className="text-sm text-muted-foreground">
-              O FinDash trata dados financeiros informados pelo usuário para exibição e gestão do próprio
+              O {APP_NAME} trata dados financeiros informados pelo usuário para exibição e gestão do próprio
               painel. O usuário pode solicitar suporte por e-mail e é responsável por manter seus backups
               em local seguro.
             </p>

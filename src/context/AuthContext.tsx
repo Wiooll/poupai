@@ -2,7 +2,7 @@
 import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 
-// Mock User type since we removed firebase
+// Tipo de usuário local (o app é offline-first e não usa autenticação remota)
 export interface User {
   uid: string;
   displayName: string | null;

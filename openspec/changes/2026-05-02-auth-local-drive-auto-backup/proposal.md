@@ -1,32 +1,33 @@
-## Why
+## Por quê
 
-O produto precisa manter a autenticacao de usuario, mas remover totalmente o armazenamento de dados no Firebase/Firestore.
-Tambem precisamos reduzir risco de perda de dados locais com backup/sincronizacao automatica no Google Drive da propria conta do usuario.
+A migração para offline-first (Sprint 4.8.0) já removeu o Firebase/Firestore: os dados vivem em Dexie (IndexedDB) e o `AuthContext` é um usuário local fixo (`local-user`). O backup hoje é apenas manual (exportar/importar JSON na aba Gerenciamento).
 
-## What Changes
+Falta reduzir o risco de perda de dados locais (limpeza do navegador, troca de dispositivo) com um backup automático opcional no Google Drive da própria conta do usuário, sem trazer de volta nenhum banco remoto.
 
-- Manter login com Google para controle de sessao e identificacao de usuario.
-- Remover dependencias de persistencia em Firestore no cliente.
-- Definir persistencia primaria local por usuario autenticado (localStorage no navegador).
-- Adicionar sincronizacao automatica de backup JSON no Google Drive do usuario autenticado.
-- Adicionar restauracao automatica opcional ao entrar na conta, com regra de conflito simples e previsivel.
-- Atualizar documentacao e mensagens de interface para refletir arquitetura sem Firestore.
+## O que muda
 
-## Capabilities
+- Limpar resquícios textuais de Firebase/Firestore (rodapé do `AuthGate`, mensagens de erro de login, comentário em `TransactionsTable`).
+- Adicionar conexão **opcional** com o Google Drive via Google Identity Services (sem Firebase), usando somente o escopo `drive.appdata` (arquivo oculto do app).
+- Adicionar sincronização automática do snapshot de backup existente (`FinanceBackupSnapshot`) com debounce, retry leve e status visível.
+- Adicionar restauração automática opcional ao conectar, com regra "mais recente vence" (`exportedAt`); empate mantém o local.
+- Tudo desativado por padrão e controlado por feature flag/config (`VITE_GOOGLE_CLIENT_ID` + `VITE_DRIVE_SYNC_ENABLED`).
+- Atualizar README, CHANGELOG, versão e notas de release.
 
-### Modified Capabilities
-- `firebase-user-auth`: manter autenticacao Google, removendo acoplamento com Firestore.
+## Capacidades
 
-### Deprecated Capabilities
-- `firestore-user-data-isolation`: deixar de ser aplicavel apos remocao do Firestore.
+### Novas
+- `google-drive-automatic-backup`: backup/sincronização automática opcional do snapshot no Drive.
 
-### New Capabilities
-- `local-user-data-persistence`: persistencia local por usuario autenticado sem backend de banco.
-- `google-drive-automatic-backup`: backup/sincronizacao automatica de snapshot no Google Drive.
+### Modificadas
+- `local-user-data-persistence` (documenta o estado atual): persistência local em Dexie, offline-first.
 
-## Impact
+### Descontinuadas
+- `firebase-user-auth` e `firestore-user-data-isolation`: não se aplicam mais (já não existem no código).
 
-- Dados: leitura/escrita financeira deixa de usar colecoes remotas e passa a usar snapshot local por `uid`.
-- Integracao: manter OAuth Google para login e adicionar fluxo OAuth/Drive para arquivo de backup.
-- UX: incluir status de sincronizacao automatica, ultima sincronizacao e erros recuperaveis.
-- Qualidade: novos testes para persistencia local, sincronizacao automatica e resolucao de conflito.
+## Impacto
+
+- Dados: nenhuma mudança de schema no Dexie; reaproveita `getBackupSnapshot` e `restoreBackupSnapshot`.
+- Integração: novo script do Google Identity Services carregado sob demanda, apenas quando o Drive está habilitado.
+- Privacidade: sem Client ID configurado, o app continua 100% local e sem requisições externas.
+- UX: card de status (sincronizado, pendente, erro, última sincronização) na aba Gerenciamento.
+- Segurança: token de acesso mantido apenas em memória; nunca persistido nem logado.
