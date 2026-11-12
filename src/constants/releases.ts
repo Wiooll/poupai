@@ -7,6 +7,21 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.8.3',
+    date: '2026-10-31',
+    highlights: [
+      'Resiliência aprimorada no Assistente de IA com suporte oficial a Gemini 2.0 Flash e 1.5 Flash.',
+      'Novo botão de teste de conexão com a API de IA na aba Gerenciamento.',
+      'Extração segura de respostas JSON e mensagens de erro amigáveis.',
+      'Ajuste no posicionamento do widget flutuante em dispositivos móveis.',
+    ],
+    details: [
+      'Adicionado fallback automático entre modelos oficiais do Gemini para evitar falhas por modelo indisponível.',
+      'Sanitização avançada de blocos markdown para garantir o correto processamento de lançamentos e consultas.',
+      'Validação prévia da chave e diagnóstico em tempo real antes de abrir o chat.',
+    ],
+  },
+  {
     version: '4.8.2',
     date: '2026-10-29',
     highlights: [

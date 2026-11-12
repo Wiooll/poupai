@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { isValidBackupSnapshot } from '../utils/localPersistence';
 import { getPartnerPromotionConfig } from '../utils/partnerPromotion';
+import { testAIConnection } from '../services/aiAssistantService';
 import type { FinanceBackupSnapshot, AppConfig } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
@@ -305,6 +306,8 @@ function AIConfigForm() {
   const [aiProvider, setAiProvider] = useState<AppConfig['aiProvider']>(config.aiProvider || 'openai');
   const [showKey, setShowKey] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleSave = async () => {
     if (!aiApiKey.trim()) {
@@ -319,17 +322,47 @@ function AIConfigForm() {
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!aiApiKey.trim()) {
+      setTestResult({
+        success: false,
+        message: 'Preencha a chave de API antes de iniciar o teste.',
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await testAIConnection({ aiApiKey: aiApiKey.trim(), aiProvider });
+      setTestResult({
+        success: res.success,
+        message: res.message,
+      });
+    } catch {
+      setTestResult({
+        success: false,
+        message: 'Falha inesperada ao testar a conexão com o provedor de IA.',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium mb-1">Provedor de IA</label>
         <select
           value={aiProvider || 'openai'}
-          onChange={(e) => setAiProvider(e.target.value as AppConfig['aiProvider'])}
+          onChange={(e) => {
+            setAiProvider(e.target.value as AppConfig['aiProvider']);
+            setTestResult(null);
+          }}
           className="w-full sm:w-64 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         >
-          <option value="openai">OpenAI (GPT)</option>
-          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI (GPT-4o)</option>
+          <option value="gemini">Google Gemini (Flash)</option>
         </select>
       </div>
 
@@ -339,7 +372,10 @@ function AIConfigForm() {
           <input
             type={showKey ? 'text' : 'password'}
             value={aiApiKey}
-            onChange={(e) => setAiApiKey(e.target.value)}
+            onChange={(e) => {
+              setAiApiKey(e.target.value);
+              setTestResult(null);
+            }}
             placeholder={config.aiApiKey ? '••••••••••••••••' : 'Insira sua chave de API'}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
           />
@@ -357,14 +393,52 @@ function AIConfigForm() {
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={handleSave}
-        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-      >
-        <Key size={16} />
-        Salvar configurações
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Key size={16} />
+          Salvar configurações
+        </button>
+
+        <button
+          type="button"
+          onClick={handleTestConnection}
+          disabled={isTesting || !aiApiKey.trim()}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isTesting ? (
+            <>
+              <Loader2 size={16} className="animate-spin text-primary" />
+              Testando conexão...
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} className="text-primary" />
+              Testar conexão
+            </>
+          )}
+        </button>
+      </div>
+
+      {testResult && (
+        <div
+          className={`p-3 rounded-lg border text-sm flex items-start gap-2.5 ${
+            testResult.success
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+              : 'bg-destructive/10 border-destructive/30 text-destructive'
+          }`}
+        >
+          {testResult.success ? (
+            <CheckCircle size={18} className="flex-shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+          )}
+          <span>{testResult.message}</span>
+        </div>
+      )}
 
       {message && (
         <p className="text-sm text-primary">{message}</p>

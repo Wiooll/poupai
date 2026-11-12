@@ -254,7 +254,7 @@ export function AiChatWidget() {
 
   if (!config.aiApiKey) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 md:bottom-8 md:right-8">
+      <div className="fixed bottom-20 right-4 z-50 md:bottom-8 md:right-8">
         <button
           onClick={toggleChat}
           className="relative h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity animate-pulse"
@@ -283,7 +283,7 @@ export function AiChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] md:bottom-8 md:right-8">
+    <div className="fixed bottom-20 right-4 z-[9999] md:bottom-8 md:right-8">
       {!isOpen && (
         <button
           onClick={toggleChat}
@@ -295,7 +295,7 @@ export function AiChatWidget() {
       )}
 
       {isOpen && (
-        <div className="absolute bottom-0 right-0 md:bottom-16 w-[90vw] md:w-[400px] max-h-[80vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <div className="absolute bottom-0 right-0 md:bottom-16 w-[92vw] sm:w-[400px] max-h-[80vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border bg-background">
             <div className="flex items-center gap-2">

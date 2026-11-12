@@ -5,6 +5,7 @@ O **FinDash** é um dashboard moderno, interativo e responsivo para controle de 
 ## Funcionalidades principais
 
 - Dashboard com resumo de saldo, receitas, despesas e economia mensal.
+- Assistente financeiro conversacional com Inteligência Artificial (OpenAI GPT-4o ou Google Gemini) com ações automáticas de lançamentos e consultas.
 - Gráficos de fluxo de caixa dos últimos 12 meses e despesas por categoria.
 - Gestão de transações com filtros, categorias e recorrências.
 - Controle de contas, cartões de crédito e faturas.
@@ -80,6 +81,14 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 4. Reinicie o app (`npm run dev`) após atualizar variáveis de ambiente.
 
 ## Atualizações recentes
+
+### Sprint 4.8.3 - Resiliência e Diagnóstico do Assistente de IA
+
+- **Resiliência de Modelos**: Suporte nativo aos modelos oficiais do Google Gemini (`gemini-2.0-flash` e `gemini-1.5-flash`) com fallback automático caso um modelo esteja indisponível na região ou chave do usuário.
+- **Teste de Conexão em Tempo Real**: Novo botão de validação na aba **Gerenciamento > Configurações de IA** que verifica a validade da chave e do provedor antes do uso.
+- **Sanitização de JSON**: Extração tolerante de respostas mesmo quando envolvidas em blocos de código markdown.
+- **Mensagens Amigáveis**: Mapeamento descritivo de erros HTTP (400, 401, 403, 404, 429) em português brasileiro.
+- **Ajuste Mobile**: Posicionamento flutuante corrigido para evitar sobreposição da barra de navegação inferior em dispositivos móveis.
 
 ### Sprint 4.8.0 - Offline-First e Local Database
 
