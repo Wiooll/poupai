@@ -82,6 +82,12 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 
 ## Atualizações recentes
 
+### Sprint 4.8.4 - Link para Obter Chave de API
+
+- Novo link **Obter chave de API** em **Gerenciamento > Configurações de IA**.
+- O destino acompanha o provedor selecionado: OpenAI (`platform.openai.com/api-keys`) ou Google Gemini (`aistudio.google.com/app/apikey`).
+- Abertura em nova aba com `rel="noopener noreferrer"`.
+
 ### Sprint 4.8.3 - Resiliência e Diagnóstico do Assistente de IA
 
 - **Resiliência de Modelos**: Suporte nativo aos modelos oficiais do Google Gemini (`gemini-2.0-flash` e `gemini-1.5-flash`) com fallback automático caso um modelo esteja indisponível na região ou chave do usuário.

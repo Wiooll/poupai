@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { isValidBackupSnapshot } from '../utils/localPersistence';
@@ -8,6 +8,11 @@ import { testAIConnection } from '../services/aiAssistantService';
 import type { FinanceBackupSnapshot, AppConfig } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
+
+const AI_API_KEY_LINKS: Record<NonNullable<AppConfig['aiProvider']>, { label: string; url: string }> = {
+  openai: { label: 'OpenAI', url: 'https://platform.openai.com/api-keys' },
+  gemini: { label: 'Google Gemini', url: 'https://aistudio.google.com/app/apikey' },
+};
 const SUPPORT_PIX_KEY = import.meta.env.VITE_SUPPORT_PIX_KEY?.trim() || '';
 const PARTNER_PROMOTION = getPartnerPromotionConfig(import.meta.env as Record<string, string | undefined>);
 
@@ -305,6 +310,7 @@ function AIConfigForm() {
   const [aiApiKey, setAiApiKey] = useState(config.aiApiKey || '');
   const [aiProvider, setAiProvider] = useState<AppConfig['aiProvider']>(config.aiProvider || 'openai');
   const [showKey, setShowKey] = useState(false);
+  const apiKeyLink = AI_API_KEY_LINKS[aiProvider || 'openai'];
   const [message, setMessage] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -391,6 +397,16 @@ function AIConfigForm() {
         <p className="text-xs text-muted-foreground mt-1">
           A chave é armazenada localmente no seu navegador e nunca é enviada para servidores externos.
         </p>
+        <a
+          href={apiKeyLink.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Obter chave de API da ${apiKeyLink.label} (abre em nova aba)`}
+          className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary hover:underline"
+        >
+          <ExternalLink size={14} />
+          Obter chave de API
+        </a>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

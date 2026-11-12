@@ -7,6 +7,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.8.4',
+    date: '2026-11-12',
+    highlights: [
+      'Novo link "Obter chave de API" nas Configurações de IA, na aba Gerenciamento.',
+    ],
+    details: [
+      'O link muda conforme o provedor selecionado (OpenAI ou Google Gemini) e abre em nova aba.',
+    ],
+  },
+  {
     version: '4.8.3',
     date: '2026-10-31',
     highlights: [

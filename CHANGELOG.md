@@ -1,3 +1,11 @@
+## [4.8.4] - 2026-11-12
+
+### Adicionado
+- Link **Obter chave de API** nas Configurações de IA, que acompanha o provedor selecionado (OpenAI ou Google Gemini).
+
+### Alterado
+- Versão da aplicação atualizada para `4.8.4`.
+
 ## [4.6.0] - 2026-04-30
 
 ### Adicionado
