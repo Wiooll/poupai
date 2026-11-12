@@ -1,3 +1,24 @@
+## [4.9.1] - 2026-11-12
+
+### Corrigido
+- Lançamentos feitos pelo Assistente de IA não apareciam em Transações: os dados agora são validados e normalizados antes de salvar.
+- Data de "hoje" do assistente passa a usar o fuso local em vez de UTC.
+- Mensagem amigável para indisponibilidade temporária (alta demanda) do modelo de IA.
+
+### Alterado
+- Contas e cartões passam a ser enviados ao assistente com seus identificadores.
+- Versão da aplicação atualizada para `4.9.1`.
+
+## [4.9.0] - 2026-11-12
+
+### Adicionado
+- Listagem dos modelos de IA disponíveis e compatíveis com a chave informada (OpenAI e Google Gemini).
+- Seleção do modelo de IA em **Gerenciamento > Configurações de IA**, salvo no campo `aiModel`.
+
+### Alterado
+- Teste de conexão e chat passam a usar o modelo escolhido; sem escolha, mantém o modelo padrão do provedor.
+- Versão da aplicação atualizada para `4.9.0`.
+
 ## [4.8.4] - 2026-11-12
 
 ### Adicionado

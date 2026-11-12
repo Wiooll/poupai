@@ -4,6 +4,7 @@ import type {
   Conta,
   CartaoCredito,
   AppConfig,
+  PaymentMethod,
 } from '../types';
 
 export interface AIContext {
@@ -44,6 +45,117 @@ const PROVIDER_MODELS = {
 export const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'] as const;
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODELS_ENDPOINT = 'https://api.openai.com/v1/models';
+const GEMINI_MODELS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000';
+
+export interface AIModelOption {
+  id: string;
+  label: string;
+}
+
+export interface AIModelListResult {
+  success: boolean;
+  models: AIModelOption[];
+  message: string;
+}
+
+// Modelos de chat da OpenAI aceitos pelo assistente (usa temperature e response_format).
+// A família "o*" foi deixada de fora por não aceitar o parâmetro temperature.
+const OPENAI_CHAT_MODEL_PATTERN = /^(gpt-|chatgpt-)/i;
+const OPENAI_EXCLUDED_TERMS = [
+  'embedding',
+  'whisper',
+  'tts',
+  'dall-e',
+  'moderation',
+  'audio',
+  'realtime',
+  'transcribe',
+  'image',
+  'instruct',
+  'search',
+];
+const GEMINI_EXCLUDED_TERMS = ['embedding', 'aqa', 'imagen', 'veo', 'tts'];
+
+export function filterOpenAIChatModels(ids: string[]): AIModelOption[] {
+  return ids
+    .filter((id) => OPENAI_CHAT_MODEL_PATTERN.test(id))
+    .filter((id) => !OPENAI_EXCLUDED_TERMS.some((term) => id.toLowerCase().includes(term)))
+    .sort((a, b) => a.localeCompare(b))
+    .map((id) => ({ id, label: id }));
+}
+
+export function filterGeminiChatModels(
+  models: Array<{ name?: string; displayName?: string; supportedGenerationMethods?: string[] }>
+): AIModelOption[] {
+  return models
+    .filter((m) => typeof m.name === 'string' && m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m) => {
+      const id = (m.name as string).replace(/^models\//, '');
+      return { id, label: m.displayName ? `${m.displayName} (${id})` : id };
+    })
+    .filter((m) => !GEMINI_EXCLUDED_TERMS.some((term) => m.id.toLowerCase().includes(term)))
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** Retorna o modelo escolhido pelo usuário ou o padrão do provedor. */
+export function resolveModel(config: Pick<AppConfig, 'aiProvider' | 'aiModel'>): string {
+  const provider = config.aiProvider || 'openai';
+  return config.aiModel?.trim() || PROVIDER_MODELS[provider];
+}
+
+export async function listAvailableModels(
+  config: Pick<AppConfig, 'aiApiKey' | 'aiProvider'>
+): Promise<AIModelListResult> {
+  const apiKey = config.aiApiKey?.trim();
+  if (!apiKey) {
+    return {
+      success: false,
+      models: [],
+      message: 'Por favor, informe a chave de API antes de carregar os modelos.',
+    };
+  }
+
+  const provider = config.aiProvider || 'openai';
+
+  try {
+    const response =
+      provider === 'openai'
+        ? await fetch(OPENAI_MODELS_ENDPOINT, { headers: { Authorization: `Bearer ${apiKey}` } })
+        : await fetch(GEMINI_MODELS_ENDPOINT, { headers: { 'x-goog-api-key': apiKey } });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `Erro HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const models =
+      provider === 'openai'
+        ? filterOpenAIChatModels(
+            (Array.isArray(data?.data) ? data.data : [])
+              .map((m: { id?: unknown }) => m?.id)
+              .filter((id: unknown): id is string => typeof id === 'string')
+          )
+        : filterGeminiChatModels(Array.isArray(data?.models) ? data.models : []);
+
+    if (models.length === 0) {
+      return {
+        success: true,
+        models: [],
+        message: 'Nenhum modelo compatível encontrado para esta chave.',
+      };
+    }
+
+    return {
+      success: true,
+      models,
+      message: `${models.length} ${models.length === 1 ? 'modelo compatível encontrado' : 'modelos compatíveis encontrados'}.`,
+    };
+  } catch (err) {
+    return { success: false, models: [], message: formatAIErrorMessage(err) };
+  }
+}
 
 export function extractJsonFromText(rawText: string): unknown {
   if (!rawText || typeof rawText !== 'string') {
@@ -121,6 +233,14 @@ export function formatAIErrorMessage(error: unknown): string {
     return 'Limite de requisições ou cota da chave de API atingido. Aguarde alguns instantes antes de tentar novamente.';
   }
   if (
+    msg.includes('503') ||
+    msg.includes('UNAVAILABLE') ||
+    lowerMsg.includes('high demand') ||
+    lowerMsg.includes('overloaded')
+  ) {
+    return 'O modelo de IA está com alta demanda no momento. Tente novamente em instantes ou escolha outro modelo nas Configurações de IA.';
+  }
+  if (
     msg.includes('Failed to fetch') ||
     msg.includes('NetworkError') ||
     msg.includes('Network request failed')
@@ -134,11 +254,15 @@ export function formatAIErrorMessage(error: unknown): string {
 async function callGeminiWithFallback(
   apiKey: string,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  chosenModel?: string
 ): Promise<{ text: string; modelUsed: string }> {
   let lastError: Error | null = null;
 
-  for (const model of GEMINI_FALLBACK_MODELS) {
+  // Com modelo escolhido pelo usuário não há fallback; sem ele, usa a lista padrão
+  const modelsToTry: readonly string[] = chosenModel ? [chosenModel] : GEMINI_FALLBACK_MODELS;
+
+  for (const model of modelsToTry) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     try {
       const response = await fetch(endpoint, {
@@ -187,7 +311,7 @@ export interface AIConnectionTestResult {
 }
 
 export async function testAIConnection(
-  config: Pick<AppConfig, 'aiApiKey' | 'aiProvider'>
+  config: Pick<AppConfig, 'aiApiKey' | 'aiProvider' | 'aiModel'>
 ): Promise<AIConnectionTestResult> {
   if (!config.aiApiKey?.trim()) {
     return {
@@ -207,7 +331,7 @@ export async function testAIConnection(
           Authorization: `Bearer ${config.aiApiKey.trim()}`,
         },
         body: JSON.stringify({
-          model: PROVIDER_MODELS.openai,
+          model: resolveModel(config),
           messages: [{ role: 'user', content: 'Ping' }],
           max_tokens: 5,
         }),
@@ -218,16 +342,18 @@ export async function testAIConnection(
         throw new Error(errorData.error?.message || `Erro HTTP: ${response.status}`);
       }
 
+      const openAIModel = resolveModel(config);
       return {
         success: true,
-        message: 'Conexão com a OpenAI (GPT-4o) validada com sucesso!',
-        modelUsed: PROVIDER_MODELS.openai,
+        message: `Conexão com a OpenAI (${openAIModel}) validada com sucesso!`,
+        modelUsed: openAIModel,
       };
     } else {
       const { modelUsed } = await callGeminiWithFallback(
         config.aiApiKey.trim(),
         'Você é um verificador de conectividade. Responda apenas com JSON: {"status":"ok"}.',
-        'ping'
+        'ping',
+        config.aiModel?.trim() || undefined
       );
 
       return {
@@ -244,20 +370,113 @@ export async function testAIConnection(
   }
 }
 
+/** Data local no formato YYYY-MM-DD (evita o deslocamento do UTC de toISOString). */
+export function getLocalDateString(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+const PAYMENT_METHODS: PaymentMethod[] = ['Dinheiro', 'Cartão de crédito', 'Débito', 'PIX'];
+
+const simplify = (value: unknown): string =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+function isValidIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+}
+
+function parseAmount(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return NaN;
+  const cleaned = value.replace(/[^\d,.-]/g, '');
+  // "1.234,56" -> 1234.56 ; "12,50" -> 12.5 ; "12.50" -> 12.5
+  const normalized = cleaned.includes(',') ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned;
+  return Number(normalized);
+}
+
+export type NormalizedProposalResult =
+  | { ok: true; data: Omit<Transaction, 'id'> }
+  | { ok: false; message: string };
+
+/**
+ * Valida e normaliza um lançamento proposto pela IA para que seja salvo
+ * com campos consistentes e apareça corretamente em Transações.
+ */
+export function normalizeTransactionProposal(
+  raw: Record<string, unknown>,
+  refs: { categories: Categoria[]; accounts: Conta[]; cards: CartaoCredito[]; today?: string }
+): NormalizedProposalResult {
+  const descricao = typeof raw.descricao === 'string' ? raw.descricao.trim() : '';
+  if (!descricao) {
+    return { ok: false, message: 'Não consegui identificar a descrição do lançamento. Pode informar do que se trata?' };
+  }
+
+  const valor = parseAmount(raw.valor);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    return { ok: false, message: 'Não consegui identificar um valor válido para o lançamento. Pode informar o valor?' };
+  }
+
+  const tipoSimples = simplify(raw.tipo);
+  if (tipoSimples !== 'receita' && tipoSimples !== 'despesa') {
+    return { ok: false, message: 'Não consegui identificar se o lançamento é uma receita ou uma despesa. Pode informar?' };
+  }
+
+  const formaPagamento =
+    PAYMENT_METHODS.find((p) => simplify(p) === simplify(raw.formaPagamento)) ?? 'PIX';
+
+  const data = isValidIsoDate(raw.data) ? raw.data : refs.today ?? getLocalDateString();
+
+  const categoriaInformada = typeof raw.categoria === 'string' ? raw.categoria.trim() : '';
+  const categoriaExistente = refs.categories.find((c) => simplify(c.nome) === simplify(categoriaInformada));
+  const categoria = categoriaExistente?.nome ?? categoriaInformada;
+  if (!categoria) {
+    return { ok: false, message: 'Não consegui identificar a categoria do lançamento. Pode informar?' };
+  }
+
+  const contaId =
+    typeof raw.contaId === 'string' && refs.accounts.some((a) => a.id === raw.contaId) ? raw.contaId : undefined;
+  const cartaoId =
+    typeof raw.cartaoId === 'string' && refs.cards.some((c) => c.id === raw.cartaoId) ? raw.cartaoId : undefined;
+  const isCartao = formaPagamento === 'Cartão de crédito';
+
+  return {
+    ok: true,
+    data: {
+      data,
+      descricao,
+      categoria,
+      tipo: tipoSimples,
+      valor,
+      formaPagamento,
+      ...(isCartao && cartaoId ? { cartaoId } : {}),
+      ...(!isCartao && contaId ? { contaId } : {}),
+    },
+  };
+}
+
 function buildSystemPrompt(context: AIContext): string {
   const categoriesList = context.categories
     .map((c) => `- ${c.nome} (${c.tipo})`)
     .join('\n');
 
   const accountsList = context.accounts
-    .map((a) => `- ${a.nome} (${a.tipo})`)
+    .map((a) => `- ${a.nome} (${a.tipo}) [id: ${a.id}]`)
     .join('\n') || 'Nenhuma conta cadastrada';
 
   const cardsList = context.cards
-    .map((c) => `- ${c.nome} (limite: R$ ${c.limite.toFixed(2)})`)
+    .map((c) => `- ${c.nome} (limite: R$ ${c.limite.toFixed(2)}) [id: ${c.id}]`)
     .join('\n') || 'Nenhum cartão cadastrado';
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return `Você é um assistente financeiro inteligente do aplicativo FinDash.
@@ -308,8 +527,8 @@ ${cardsList}
     "tipo": "receita|despesa|transferencia",
     "formaPagamento": "string",
     "data": "YYYY-MM-DD",
-    "contaId?: string",
-    "cartaoId?: string"
+    "contaId": "string (opcional, id da conta)",
+    "cartaoId": "string (opcional, id do cartão)"
   },
   "replyText": "Texto amigável para exibir ao usuário antes da confirmação"
 }
@@ -322,7 +541,7 @@ ${cardsList}
 }
 
 function calculateMonthlySummary(transactions: Transaction[]): AIContext['monthlySummary'] {
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = getLocalDateString().slice(0, 7); // YYYY-MM
   let totalIncome = 0;
   let totalExpense = 0;
 
@@ -390,7 +609,7 @@ export async function processAIMessage(
           Authorization: `Bearer ${config.aiApiKey}`,
         },
         body: JSON.stringify({
-          model: PROVIDER_MODELS.openai,
+          model: resolveModel(config),
           messages,
           temperature: 0.1,
           response_format: { type: 'json_object' },
@@ -409,7 +628,8 @@ export async function processAIMessage(
       const { text } = await callGeminiWithFallback(
         config.aiApiKey,
         systemPrompt,
-        userMessage
+        userMessage,
+        config.aiModel?.trim() || undefined
       );
       responseText = text;
     }
@@ -436,6 +656,22 @@ export async function processAIMessage(
       typeof obj.data === 'object' &&
       typeof obj.replyText === 'string'
     ) {
+      if (obj.action === 'ADD_TRANSACTION') {
+        const normalized = normalizeTransactionProposal(obj.data as Record<string, unknown>, {
+          categories: data.categories,
+          accounts: data.accounts,
+          cards: data.cards,
+        });
+        if (!normalized.ok) {
+          return { type: 'QUERY_RESPONSE', replyText: normalized.message };
+        }
+        return {
+          type: 'ACTION_PROPOSAL',
+          action: 'ADD_TRANSACTION',
+          data: normalized.data,
+          replyText: obj.replyText,
+        };
+      }
       return obj as unknown as AIActionProposal;
     }
 

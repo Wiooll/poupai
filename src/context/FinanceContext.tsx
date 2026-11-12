@@ -177,6 +177,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     themeMode: 'white',
     aiApiKey: undefined,
     aiProvider: undefined,
+    aiModel: undefined,
   };
 
   const applyTheme = useCallback((themeMode: ThemeMode) => {
@@ -202,6 +203,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           themeMode: 'white',
           aiApiKey: undefined,
           aiProvider: undefined,
+          aiModel: undefined,
         });
       }
     };

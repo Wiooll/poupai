@@ -65,6 +65,7 @@ export interface AppConfig {
   themeMode?: ThemeMode;
   aiApiKey?: string;
   aiProvider?: 'openai' | 'gemini';
+  aiModel?: string;
 }
 
 // Sprint 2: Conta/Carteira

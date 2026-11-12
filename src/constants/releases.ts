@@ -7,6 +7,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.9.1',
+    date: '2026-11-12',
+    highlights: [
+      'Correção: lançamentos feitos pelo Assistente de IA agora aparecem corretamente em Transações.',
+    ],
+    details: [
+      'Os dados propostos pela IA (data, tipo, valor, forma de pagamento, categoria, conta e cartão) são validados e ajustados antes de salvar.',
+      'Propostas sem descrição, valor ou tipo válido não são mais salvas, e o assistente pede as informações que faltam.',
+      'A data de hoje passou a considerar o fuso local, evitando lançamentos no dia ou mês errado à noite.',
+    ],
+  },
+  {
+    version: '4.9.0',
+    date: '2026-11-12',
+    highlights: [
+      'Ao informar a chave de API, o app lista os modelos de IA disponíveis e compatíveis com ela.',
+      'Agora você pode escolher o modelo de IA nas Configurações de IA, na aba Gerenciamento.',
+    ],
+    details: [
+      'A lista mostra apenas modelos de conversa compatíveis com o assistente, conforme o provedor selecionado.',
+      'O modelo escolhido é usado no teste de conexão e no chat. Sem escolha, o modelo padrão do provedor continua valendo.',
+    ],
+  },
+  {
     version: '4.8.4',
     date: '2026-11-12',
     highlights: [

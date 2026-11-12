@@ -82,6 +82,21 @@ VITE_PARTNER_APP_CTA_LABEL=Conhecer app parceiro
 
 ## Atualizações recentes
 
+### Sprint 4.9.1 - Correção de Lançamentos pelo Assistente de IA
+
+- Lançamentos criados pela IA passam por validação antes do preview e do salvamento: data (`YYYY-MM-DD`), tipo, valor, forma de pagamento, categoria, conta e cartão.
+- Propostas sem descrição, com valor inválido ou sem tipo de receita/despesa são recusadas com orientação em português.
+- "Hoje" usa o fuso local do usuário; contas e cartões são enviados à IA com seus identificadores.
+- Mensagem amigável quando o modelo de IA está com alta demanda.
+
+### Sprint 4.9.0 - Listagem e Seleção de Modelos de IA
+
+- Ao informar a chave de API, o app consulta o provedor e lista os modelos disponíveis e compatíveis com o assistente (clique em **Carregar modelos** ou saia do campo da chave).
+- OpenAI: lista apenas modelos de chat (`gpt-*`), sem embeddings, áudio, imagem ou moderação. Gemini: apenas modelos com suporte a `generateContent`.
+- O modelo escolhido é salvo em **Gerenciamento > Configurações de IA** e usado no teste de conexão e no chat. Sem escolha, vale o padrão do provedor.
+- Se o modelo salvo não estiver mais disponível para a chave, o app avisa e não troca de modelo automaticamente.
+- Falhas na listagem (chave inválida, rede ou CORS) exibem mensagem clara e não impedem salvar a chave.
+
 ### Sprint 4.8.4 - Link para Obter Chave de API
 
 - Novo link **Obter chave de API** em **Gerenciamento > Configurações de IA**.

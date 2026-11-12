@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Bug, Copy, FileText, HandHeart, LifeBuoy, Mail, ShieldCheck, Cookie, Cloud, Upload, Download, Key, Eye, EyeOff, Sparkles, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { APP_VERSION } from '../constants/app';
 import { useFinance } from '../context/FinanceContext';
 import { isValidBackupSnapshot } from '../utils/localPersistence';
 import { getPartnerPromotionConfig } from '../utils/partnerPromotion';
-import { testAIConnection } from '../services/aiAssistantService';
+import { listAvailableModels, testAIConnection } from '../services/aiAssistantService';
+import type { AIModelOption } from '../services/aiAssistantService';
 import type { FinanceBackupSnapshot, AppConfig } from '../types';
 
 const SUPPORT_EMAIL = 'suporte.listae@gmail.com';
@@ -314,6 +315,42 @@ function AIConfigForm() {
   const [message, setMessage] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [aiModel, setAiModel] = useState(config.aiModel || '');
+  const [models, setModels] = useState<AIModelOption[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelsResult, setModelsResult] = useState<{ success: boolean; message: string } | null>(null);
+  // Identifica a consulta mais recente para descartar respostas obsoletas
+  const modelsRequestId = useRef(0);
+
+  const resetModels = () => {
+    modelsRequestId.current += 1;
+    setModels([]);
+    setModelsResult(null);
+    setIsLoadingModels(false);
+  };
+
+  const handleLoadModels = async () => {
+    const key = aiApiKey.trim();
+    if (!key) return;
+
+    const requestId = ++modelsRequestId.current;
+    setIsLoadingModels(true);
+    setModelsResult(null);
+
+    const res = await listAvailableModels({ aiApiKey: key, aiProvider });
+    if (requestId !== modelsRequestId.current) return;
+
+    setModels(res.models);
+    setIsLoadingModels(false);
+
+    const savedModelMissing = res.success && aiModel && !res.models.some((m) => m.id === aiModel);
+    setModelsResult({
+      success: res.success,
+      message: savedModelMissing
+        ? `O modelo salvo (${aiModel}) não está disponível para esta chave. Escolha outro modelo.`
+        : res.message,
+    });
+  };
 
   const handleSave = async () => {
     if (!aiApiKey.trim()) {
@@ -321,7 +358,7 @@ function AIConfigForm() {
       return;
     }
     try {
-      await updateConfig({ aiApiKey: aiApiKey.trim(), aiProvider });
+      await updateConfig({ aiApiKey: aiApiKey.trim(), aiProvider, aiModel: aiModel || undefined });
       setMessage('Configurações salvas com sucesso.');
     } catch {
       setMessage('Erro ao salvar configurações.');
@@ -340,7 +377,7 @@ function AIConfigForm() {
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await testAIConnection({ aiApiKey: aiApiKey.trim(), aiProvider });
+      const res = await testAIConnection({ aiApiKey: aiApiKey.trim(), aiProvider, aiModel: aiModel || undefined });
       setTestResult({
         success: res.success,
         message: res.message,
@@ -363,6 +400,8 @@ function AIConfigForm() {
           value={aiProvider || 'openai'}
           onChange={(e) => {
             setAiProvider(e.target.value as AppConfig['aiProvider']);
+            setAiModel('');
+            resetModels();
             setTestResult(null);
           }}
           className="w-full sm:w-64 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -380,7 +419,13 @@ function AIConfigForm() {
             value={aiApiKey}
             onChange={(e) => {
               setAiApiKey(e.target.value);
+              resetModels();
               setTestResult(null);
+            }}
+            onBlur={() => {
+              if (aiApiKey.trim() && models.length === 0 && !isLoadingModels && !modelsResult) {
+                void handleLoadModels();
+              }
             }}
             placeholder={config.aiApiKey ? '••••••••••••••••' : 'Insira sua chave de API'}
             className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -407,6 +452,55 @@ function AIConfigForm() {
           <ExternalLink size={14} />
           Obter chave de API
         </a>
+      </div>
+
+      <div>
+        <label htmlFor="ai-model-select" className="block text-sm font-medium mb-1">Modelo de IA</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            id="ai-model-select"
+            value={aiModel}
+            onChange={(e) => {
+              setAiModel(e.target.value);
+              setTestResult(null);
+            }}
+            disabled={models.length === 0 && !aiModel}
+            className="w-full sm:w-80 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+          >
+            <option value="">Padrão do provedor</option>
+            {aiModel && !models.some((m) => m.id === aiModel) && (
+              <option value={aiModel}>{aiModel} (salvo)</option>
+            )}
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleLoadModels}
+            disabled={isLoadingModels || !aiApiKey.trim()}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingModels ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-primary" />
+                Carregando modelos...
+              </>
+            ) : (
+              'Carregar modelos'
+            )}
+          </button>
+        </div>
+        <p
+          aria-live="polite"
+          className={`text-xs mt-1 ${
+            modelsResult && !modelsResult.success ? 'text-destructive' : 'text-muted-foreground'
+          }`}
+        >
+          {modelsResult?.message ?? 'Informe a chave de API para listar os modelos disponíveis e compatíveis.'}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
