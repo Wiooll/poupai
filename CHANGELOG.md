@@ -1,3 +1,9 @@
+## [4.11.2] - 2026-11-13
+
+### Alterado
+- Favicon do app trocado para a ilustração de cartão de crédito 3D (`public/favicon.png`, 256x256, otimizado a partir da imagem original).
+- Versão da aplicação atualizada para `4.11.2`.
+
 ## [4.11.1] - 2026-11-12
 
 ### Corrigido

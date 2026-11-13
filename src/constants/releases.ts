@@ -7,6 +7,13 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.11.2',
+    date: '2026-11-13',
+    highlights: [
+      'Novo ícone do aplicativo na aba do navegador: um cartão de crédito em 3D.',
+    ],
+  },
+  {
     version: '4.11.1',
     date: '2026-11-12',
     highlights: [
