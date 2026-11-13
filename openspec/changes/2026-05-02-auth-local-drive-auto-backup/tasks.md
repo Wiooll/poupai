@@ -20,8 +20,8 @@
 ## 5. Qualidade
 - [x] 5.1 Testes unitários de `resolveConflict`.
 - [x] 5.2 Testes do serviço Drive com `fetch` mockado (sucesso, 401, rede, 500, snapshot inválido).
-- [ ] 5.3 Rodar `npm run lint`, `npm test` e `npm run build` (lint tem 2 erros preexistentes em `AiChatWidget.tsx`).
-- [ ] 5.4 Validação manual com Client ID real (conectar, alterar, recarregar, reconectar, restaurar).
+- [x] 5.3 Rodar `npm run lint`, `npm test` e `npm run build` (lint tem 2 erros preexistentes em `AiChatWidget.tsx`).
+- [x] 5.4 Validação manual com Client ID real (conectar, alterar, recarregar, reconectar, restaurar).
 
 ## 6. Documentação, versão e comunicação
 - [x] 6.1 Atualizar `README.md` (arquitetura local + Drive opcional, variáveis de ambiente).
