@@ -11,6 +11,7 @@ import { Goals } from './components/Goals';
 import { CreditCards } from './components/CreditCards';
 import { Insights } from './components/Insights';
 import { Loans } from './components/Loans';
+import { Debts } from './components/Debts';
 import { Management } from './components/Management';
 import { Updates } from './components/Updates';
 import { APP_VERSION } from './constants/app';
@@ -53,6 +54,7 @@ function AppContent() {
       {activeTab === 'dashboard' && <Dashboard />}
       {activeTab === 'transactions' && <TransactionsTable />}
       {activeTab === 'loans' && <Loans />}
+      {activeTab === 'debts' && <Debts />}
       {activeTab === 'credit-cards' && <CreditCards />}
       {activeTab === 'insights' && <Insights />}
       {activeTab === 'categories' && <Categories />}

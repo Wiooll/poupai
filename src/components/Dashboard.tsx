@@ -7,6 +7,7 @@ import {
   Calendar,
   CreditCard,
   DollarSign,
+  HandCoins,
   PiggyBank,
   ShieldAlert,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ import {
   calculateMonthEndProjection,
 } from '../utils/financialInsights';
 import { calculateDashboardTotals } from '../utils/financialCalculations';
+import { getTotalOwed } from '../utils/debtCalculations';
 
 const COLORS = [
   '#0088FE',
@@ -47,8 +49,18 @@ const formatCurrency = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
 export const Dashboard = () => {
-  const { transactions, config, categoryBudgets, categories, cartoesCredito, getFaturasInfo } =
-    useFinance();
+  const {
+    transactions,
+    config,
+    categoryBudgets,
+    categories,
+    cartoesCredito,
+    getFaturasInfo,
+    debts,
+    debtPayments,
+  } = useFinance();
+
+  const totalDevido = useMemo(() => getTotalOwed(debts, debtPayments), [debts, debtPayments]);
 
   const currentMonth = startOfMonth(new Date());
   const anoMesAtual = format(new Date(), 'yyyy-MM');
@@ -252,6 +264,19 @@ export const Dashboard = () => {
             </p>
           </div>
         )}
+
+        <div className={`bg-card p-5 rounded-xl border ${totalDevido > 0 ? 'border-danger/40' : 'border-border'} shadow-sm`}>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-sm font-medium text-muted-foreground">Total devido</p>
+            <HandCoins className={totalDevido > 0 ? 'text-danger' : 'text-muted-foreground'} size={18} />
+          </div>
+          <h3 className={`text-2xl font-bold ${totalDevido > 0 ? 'text-danger' : 'text-foreground'}`}>
+            {formatCurrency(totalDevido)}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            {totalDevido > 0 ? 'Dívidas em aberto' : 'Nenhuma dívida em aberto'}
+          </p>
+        </div>
 
         <div className={`bg-card p-5 rounded-xl border ${riskCount > 0 ? 'border-amber-500/40' : 'border-border'} shadow-sm`}>
           <div className="flex justify-between items-center mb-3">

@@ -7,6 +7,20 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '4.12.0',
+    date: '2026-11-13',
+    highlights: [
+      'Nova aba Dívidas: registre o que você deve e não pode pagar agora.',
+      'Pague aos poucos: cada pagamento fica no histórico e gera uma despesa na conta escolhida.',
+      'O Dashboard mostra o total devido.',
+    ],
+    details: [
+      'Cada dívida tem credor, valor total, vencimento, prioridade, juros e parcelas (informativos) e observação.',
+      'Você pode desfazer um pagamento: a despesa gerada também é removida.',
+      'Os backups passam a incluir as dívidas. Backups antigos continuam sendo restaurados normalmente.',
+    ],
+  },
+  {
     version: '4.11.2',
     date: '2026-11-13',
     highlights: [

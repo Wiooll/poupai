@@ -31,6 +31,9 @@ export const isValidBackupSnapshot = (value: unknown): value is FinanceBackupSna
     && Array.isArray(data.cartoesCredito)
     && Array.isArray(data.faturaStatuses)
     && Array.isArray(data.loans)
+    // Campos novos (v4.12.0): podem faltar em backups antigos, mas, se existirem, devem ser listas.
+    && (data.debts === undefined || Array.isArray(data.debts))
+    && (data.debtPayments === undefined || Array.isArray(data.debtPayments))
   );
 };
 

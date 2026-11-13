@@ -1,3 +1,14 @@
+## [4.12.0] - 2026-11-13
+
+### Adicionado
+- Nova aba **Dívidas**: cadastro de dívidas com credor, valor total, vencimento, prioridade, juros e parcelas (informativos) e observação.
+- Pagamento total ou parcial com histórico de abatimentos; cada pagamento gera uma despesa (categoria "Pagamento de Dívida") descontada da conta escolhida, e pode ser desfeito.
+- Status `pendente`, `parcial` e `quitada`; dívidas vencidas são sinalizadas na lista.
+- Card **Total devido** no Dashboard.
+- Backups (manual e Drive) passam a incluir `debts` e `debtPayments`; backups antigos sem esses campos continuam válidos.
+- Banco local com `version(2)` do Dexie (novas tabelas `debts` e `debtPayments`, sem alterar dados existentes).
+- Versão da aplicação atualizada para `4.12.0`.
+
 ## [4.11.2] - 2026-11-13
 
 ### Alterado

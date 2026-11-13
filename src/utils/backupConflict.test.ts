@@ -46,6 +46,11 @@ describe('isLocalDataEmpty', () => {
     expect(isLocalDataEmpty(emptyData)).toBe(true);
   });
 
+  it('não considera vazio quando há dívidas', () => {
+    const data = { ...emptyData, debts: [{ id: 'd1' } as NonNullable<FinanceBackupData['debts']>[number]] };
+    expect(isLocalDataEmpty(data)).toBe(false);
+  });
+
   it('não considera vazio quando há metas', () => {
     const data = { ...emptyData, goals: [{ id: 'g1' } as FinanceBackupData['goals'][number]] };
     expect(isLocalDataEmpty(data)).toBe(false);

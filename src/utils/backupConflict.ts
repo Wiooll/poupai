@@ -10,6 +10,8 @@ export const isLocalDataEmpty = (data: FinanceBackupData): boolean =>
   && data.contas.length === 0
   && data.cartoesCredito.length === 0
   && data.loans.length === 0
+  && (data.debts?.length ?? 0) === 0
+  && (data.debtPayments?.length ?? 0) === 0
   && data.goals.length === 0
   && data.recurringTransactions.length === 0
   && data.categoryBudgets.length === 0;

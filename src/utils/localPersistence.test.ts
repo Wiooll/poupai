@@ -30,6 +30,22 @@ describe('localPersistence', () => {
     expect(isValidBackupSnapshot(legado)).toBe(true);
   });
 
+  it('aceita backup antigo sem debts e debtPayments', () => {
+    const antigo = createBackupSnapshot(mockData);
+    expect(antigo.data.debts).toBeUndefined();
+    expect(isValidBackupSnapshot(antigo)).toBe(true);
+  });
+
+  it('aceita backup novo com debts e debtPayments', () => {
+    const novo = createBackupSnapshot({ ...mockData, debts: [], debtPayments: [] });
+    expect(isValidBackupSnapshot(novo)).toBe(true);
+  });
+
+  it('invalida backup com debts que não é lista', () => {
+    const invalido = createBackupSnapshot({ ...mockData, debts: 'x' as unknown as [] });
+    expect(isValidBackupSnapshot(invalido)).toBe(false);
+  });
+
   it('invalida snapshot sem estrutura esperada', () => {
     expect(isValidBackupSnapshot({ foo: 'bar' })).toBe(false);
   });

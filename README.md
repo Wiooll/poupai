@@ -1,6 +1,6 @@
 # PoupAi | Seu Dashboard Financeiro
 
-> Versão atual: **4.11.2** (novo favicon: cartão de crédito 3D em `public/favicon.png`). Anterior: 4.11.1 (correção: nova transação não exige mais conta/cartão quando nenhum está cadastrado). O app foi renomeado de FinDash para PoupAi. Por compatibilidade com dados e backups já existentes, os identificadores internos continuam com o prefixo `findash` (banco `FinDashDB`, chaves `findash_*`/`findash:*` do navegador e o arquivo `findash-backup.json` no Google Drive). Backups antigos continuam sendo restaurados normalmente.
+> Versão atual: **4.12.0** (nova aba **Dívidas**). Anterior: 4.11.2 (novo favicon: cartão de crédito 3D em `public/favicon.png`); 4.11.1 (correção: nova transação não exige mais conta/cartão quando nenhum está cadastrado). O app foi renomeado de FinDash para PoupAi. Por compatibilidade com dados e backups já existentes, os identificadores internos continuam com o prefixo `findash` (banco `FinDashDB`, chaves `findash_*`/`findash:*` do navegador e o arquivo `findash-backup.json` no Google Drive). Backups antigos continuam sendo restaurados normalmente.
 
 O **PoupAi** é um dashboard moderno, interativo e responsivo para controle de despesas e finanças pessoais.
 
@@ -12,6 +12,7 @@ O **PoupAi** é um dashboard moderno, interativo e responsivo para controle de d
 - Gestão de transações com filtros, categorias e recorrências.
 - Controle de contas, cartões de crédito e faturas.
 - Módulo de empréstimos com acompanhamento de status.
+- Aba **Dívidas**: registre o que você deve, pague total ou parcialmente com histórico de abatimentos (cada pagamento gera uma despesa na conta escolhida) e acompanhe o **Total devido** no Dashboard.
 - Tela de gerenciamento com suporte, backup manual e documentos legais.
 - Seção de apoio ao projeto com cópia da chave Pix para contribuição opcional.
 - Seção de app parceiro na aba Gerenciamento com CTA externo seguro.
@@ -110,6 +111,14 @@ Como funciona:
 Arquivos principais: `src/services/driveBackupService.ts`, `src/services/localChangeTracker.ts`, `src/utils/backupConflict.ts`, `src/context/DriveSyncContext.tsx` e `src/components/DriveSyncCard.tsx`.
 
 ## Atualizações recentes
+
+### Sprint 4.12.0 - Controle de Dívidas
+
+- Nova aba **Dívidas** com credor, valor total, vencimento, prioridade, juros e parcelas (informativos) e observação.
+- Pagamento total ou parcial: cria uma despesa "Pagamento de Dívida" na conta escolhida e registra o abatimento no histórico; é possível desfazer.
+- Status `pendente`, `parcial` e `quitada`; "vencida" é calculada pelo vencimento.
+- Card **Total devido** no Dashboard.
+- Backups incluem `debts` e `debtPayments`; backups antigos continuam válidos. Banco Dexie na `version(2)` (apenas novas tabelas).
 
 ### Sprint 4.10.1 - Reconexão do Drive
 

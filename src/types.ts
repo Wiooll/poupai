@@ -107,6 +107,36 @@ export interface Loan {
   updatedAt: string;
 }
 
+export type DebtStatus = 'pendente' | 'parcial' | 'quitada';
+export type DebtPriority = 'baixa' | 'media' | 'alta';
+
+export interface Debt {
+  id: string;
+  userId?: string;
+  descricao: string;
+  credor: string;
+  valorTotal: number;
+  vencimento?: string; // YYYY-MM-DD
+  prioridade?: DebtPriority;
+  observacao?: string;
+  jurosInformativo?: string; // texto livre, ex.: "2% ao mês"
+  parcelasInformativo?: string; // texto livre, ex.: "10x de R$ 150,00"
+  status: DebtStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DebtPayment {
+  id: string;
+  userId?: string;
+  debtId: string;
+  valor: number;
+  data: string; // YYYY-MM-DD
+  contaId: string;
+  transactionId: string; // despesa gerada pelo pagamento
+  createdAt: string;
+}
+
 export interface Goal {
   id: string;
   userId?: string;
@@ -206,6 +236,10 @@ export interface FinanceBackupData {
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
   goals: Goal[];
+  /** Ausente em backups anteriores à v4.12.0. */
+  debts?: Debt[];
+  /** Ausente em backups anteriores à v4.12.0. */
+  debtPayments?: DebtPayment[];
 }
 
 export interface FinanceBackupSnapshot {

@@ -8,6 +8,8 @@ import type {
   RecurringTransaction,
   CategoryBudget,
   Loan,
+  Debt,
+  DebtPayment,
   Goal,
   AppConfig
 } from '../types';
@@ -22,6 +24,8 @@ export class FinDashDatabase extends Dexie {
   categoryBudgets!: Table<CategoryBudget, string>;
   loans!: Table<Loan, string>;
   goals!: Table<Goal, string>;
+  debts!: Table<Debt, string>;
+  debtPayments!: Table<DebtPayment, string>;
   config!: Table<AppConfig & { id: string }, string>;
 
   constructor() {
@@ -37,6 +41,11 @@ export class FinDashDatabase extends Dexie {
       loans: 'id, status',
       goals: 'id',
       config: 'id'
+    });
+    // v4.12.0: novas tabelas de dívidas (migração apenas aditiva).
+    this.version(2).stores({
+      debts: 'id, status',
+      debtPayments: 'id, debtId'
     });
   }
 }

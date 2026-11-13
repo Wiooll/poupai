@@ -12,6 +12,8 @@ import type {
   Categoria,
   CategoryBudget,
   Conta,
+  Debt,
+  DebtPayment,
   FaturaInfo,
   FaturaStatus,
   Goal,
@@ -34,6 +36,10 @@ import {
   setDate,
 } from 'date-fns';
 import { v4 as uuid } from 'uuid';
+import { getDebtPaidTotal, getDebtStatus, roundMoney } from '../utils/debtCalculations';
+import { validateDebtInput, validateDebtPayment, type DebtInput } from '../utils/debtValidation';
+
+export const DEBT_PAYMENT_CATEGORY = 'Pagamento de Dívida';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -45,6 +51,8 @@ interface FinanceContextType {
   cartoesCredito: CartaoCredito[];
   faturaStatuses: FaturaStatus[];
   loans: Loan[];
+  debts: Debt[];
+  debtPayments: DebtPayment[];
   goals: Goal[];
   /** `true` quando todas as leituras iniciais do banco local terminaram. */
   isDataLoaded: boolean;
@@ -97,6 +105,12 @@ interface FinanceContextType {
   updateLoan: (id: string, loan: Partial<Loan>) => Promise<void>;
   deleteLoan: (id: string) => Promise<void>;
   updateLoanStatus: (id: string, status: LoanStatus) => Promise<void>;
+
+  addDebt: (debt: DebtInput) => Promise<void>;
+  updateDebt: (id: string, debt: Partial<DebtInput>) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  payDebt: (debtId: string, payment: { valor: number; data: string; contaId: string }) => Promise<void>;
+  deleteDebtPayment: (paymentId: string) => Promise<void>;
 
   pagarFatura: (cartaoId: string, anoMes: string) => Promise<void>;
 
@@ -172,6 +186,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
   const cartoesQuery = useLiveQuery(() => db.cartoesCredito.toArray());
   const faturaStatusesQuery = useLiveQuery(() => db.faturaStatuses.toArray());
   const loansQuery = useLiveQuery(() => db.loans.toArray());
+  const debtsQuery = useLiveQuery(() => db.debts.toArray());
+  const debtPaymentsQuery = useLiveQuery(() => db.debtPayments.toArray());
   const goalsQuery = useLiveQuery(() => db.goals.toArray());
   const configQuery = useLiveQuery(() => db.config.toArray());
 
@@ -184,6 +200,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     cartoesQuery,
     faturaStatusesQuery,
     loansQuery,
+    debtsQuery,
+    debtPaymentsQuery,
     goalsQuery,
     configQuery,
   ].every((result) => result !== undefined);
@@ -196,6 +214,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
   const cartoesCredito = cartoesQuery || [];
   const faturaStatuses = faturaStatusesQuery || [];
   const loans = loansQuery || [];
+  const debts = debtsQuery || [];
+  const debtPayments = debtPaymentsQuery || [];
   const goals = goalsQuery || [];
   const configArr = configQuery || [];
 
@@ -256,6 +276,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     faturaStatuses,
     loans,
     goals,
+    debts,
+    debtPayments,
   }), [
     transactions,
     categories,
@@ -267,6 +289,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     faturaStatuses,
     loans,
     goals,
+    debts,
+    debtPayments,
   ]);
 
   // Recurrence Sync
@@ -600,6 +624,122 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     await db.loans.update(id, { status, updatedAt: new Date().toISOString() });
   };
 
+  const addDebt = async (debt: DebtInput) => {
+    const error = validateDebtInput(debt);
+    if (error) throw new Error(error);
+    const now = new Date().toISOString();
+    await db.debts.add(
+      stripUndefined({
+        ...debt,
+        descricao: debt.descricao.trim(),
+        credor: debt.credor.trim(),
+        valorTotal: roundMoney(Number(debt.valorTotal)),
+        id: uuid(),
+        status: 'pendente' as const,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+  };
+
+  const updateDebt = async (id: string, patch: Partial<DebtInput>) => {
+    await db.transaction('rw', db.debts, db.debtPayments, async () => {
+      const current = await db.debts.get(id);
+      if (!current) throw new Error('Dívida não encontrada.');
+      const merged = { ...current, ...patch };
+      const error = validateDebtInput(merged);
+      if (error) throw new Error(error);
+
+      const payments = await db.debtPayments.where('debtId').equals(id).toArray();
+      const valorTotal = roundMoney(Number(merged.valorTotal));
+      if (valorTotal < getDebtPaidTotal(id, payments)) {
+        throw new Error('O valor total não pode ser menor que o que já foi pago.');
+      }
+
+      await db.debts.put(
+        stripUndefined({
+          ...merged,
+          descricao: merged.descricao.trim(),
+          credor: merged.credor.trim(),
+          valorTotal,
+          status: getDebtStatus({ id, valorTotal }, payments),
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+    });
+  };
+
+  const deleteDebt = async (id: string) => {
+    await db.transaction('rw', db.debts, db.debtPayments, db.transactions, async () => {
+      const payments = await db.debtPayments.where('debtId').equals(id).toArray();
+      await db.transactions.bulkDelete(payments.map((payment) => payment.transactionId));
+      await db.debtPayments.bulkDelete(payments.map((payment) => payment.id));
+      await db.debts.delete(id);
+    });
+  };
+
+  // Cria a despesa, o registro de pagamento e atualiza o status em uma única transação.
+  const payDebt = async (debtId: string, payment: { valor: number; data: string; contaId: string }) => {
+    await db.transaction('rw', db.debts, db.debtPayments, db.transactions, async () => {
+      const debt = await db.debts.get(debtId);
+      if (!debt) throw new Error('Dívida não encontrada.');
+
+      const payments = await db.debtPayments.where('debtId').equals(debtId).toArray();
+      const remaining = roundMoney(Number(debt.valorTotal) - getDebtPaidTotal(debtId, payments));
+      const error = validateDebtPayment(payment, remaining);
+      if (error) throw new Error(error);
+
+      const valor = roundMoney(Number(payment.valor));
+      const transactionId = uuid();
+      const now = new Date().toISOString();
+
+      await db.transactions.add({
+        id: transactionId,
+        data: payment.data,
+        descricao: `Pagamento de dívida: ${debt.descricao} (${debt.credor})`,
+        categoria: DEBT_PAYMENT_CATEGORY,
+        tipo: 'despesa',
+        valor,
+        formaPagamento: 'PIX',
+        contaId: payment.contaId,
+      });
+
+      const newPayment: DebtPayment = {
+        id: uuid(),
+        debtId,
+        valor,
+        data: payment.data,
+        contaId: payment.contaId,
+        transactionId,
+        createdAt: now,
+      };
+      await db.debtPayments.add(newPayment);
+
+      await db.debts.update(debtId, {
+        status: getDebtStatus(debt, [...payments, newPayment]),
+        updatedAt: now,
+      });
+    });
+  };
+
+  const deleteDebtPayment = async (paymentId: string) => {
+    await db.transaction('rw', db.debts, db.debtPayments, db.transactions, async () => {
+      const payment = await db.debtPayments.get(paymentId);
+      if (!payment) return;
+
+      await db.transactions.delete(payment.transactionId);
+      await db.debtPayments.delete(paymentId);
+
+      const debt = await db.debts.get(payment.debtId);
+      if (!debt) return;
+      const payments = await db.debtPayments.where('debtId').equals(debt.id).toArray();
+      await db.debts.update(debt.id, {
+        status: getDebtStatus(debt, payments),
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  };
+
   const pagarFatura = async (cartaoId: string, anoMes: string) => {
     const cartao = cartoesCredito.find((c) => c.id === cartaoId);
     if (!cartao) throw new Error('Cartão não encontrado');
@@ -668,6 +808,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       db.cartoesCredito,
       db.faturaStatuses,
       db.loans,
+      db.debts,
+      db.debtPayments,
       db.goals,
       db.config
     ], async () => {
@@ -679,6 +821,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       await db.cartoesCredito.clear();
       await db.faturaStatuses.clear();
       await db.loans.clear();
+      await db.debts.clear();
+      await db.debtPayments.clear();
       await db.goals.clear();
       await db.config.clear();
 
@@ -690,6 +834,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       if (data.cartoesCredito?.length) await db.cartoesCredito.bulkAdd(data.cartoesCredito);
       if (data.faturaStatuses?.length) await db.faturaStatuses.bulkAdd(data.faturaStatuses);
       if (data.loans?.length) await db.loans.bulkAdd(data.loans);
+      if (data.debts?.length) await db.debts.bulkAdd(data.debts);
+      if (data.debtPayments?.length) await db.debtPayments.bulkAdd(data.debtPayments);
       if (data.goals?.length) await db.goals.bulkAdd(data.goals);
       if (data.config) await db.config.add({ ...data.config, id: 'main' });
     });
@@ -707,6 +853,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         cartoesCredito,
         faturaStatuses,
         loans,
+        debts,
+        debtPayments,
         goals,
         isDataLoaded,
         addGoal,
@@ -738,6 +886,11 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         updateLoan,
         deleteLoan,
         updateLoanStatus,
+        addDebt,
+        updateDebt,
+        deleteDebt,
+        payDebt,
+        deleteDebtPayment,
         pagarFatura,
         getSaldoConta,
         getFaturasInfo,
